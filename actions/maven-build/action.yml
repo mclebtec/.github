@@ -1,0 +1,29 @@
+name: 'Maven Build'
+description: 'Build Maven project with optional profiles'
+
+inputs:
+  module_path:
+    description: 'Path to the Maven module to build'
+    required: true
+  maven_profiles:
+    description: 'Maven profiles to use (e.g., -Pno-spring)'
+    required: false
+    default: ''
+  maven_goals:
+    description: 'Maven goals (default: clean package)'
+    required: false
+    default: 'clean package'
+  maven_args:
+    description: 'Additional Maven arguments'
+    required: false
+    default: '-DskipTests -DskipImage=true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build Maven project
+      shell: bash
+      run: |
+        cd ${{ inputs.module_path }}
+        mvn ${{ inputs.maven_goals }} ${{ inputs.maven_args }} ${{ inputs.maven_profiles }}
+

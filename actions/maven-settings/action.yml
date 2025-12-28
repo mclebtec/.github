@@ -1,0 +1,38 @@
+name: 'Configure Maven Settings'
+description: 'Configure Maven settings.xml for GCP Artifact Registry'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure Maven settings
+      shell: bash
+      run: |
+        mkdir -p ~/.m2
+        cat > ~/.m2/settings.xml <<EOF
+        <settings>
+          <servers>
+            <server>
+              <id>gcp-maven-repo</id>
+              <configuration>
+                <httpConfiguration>
+                  <get>
+                    <usePreemptive>true</usePreemptive>
+                  </get>
+                  <head>
+                    <usePreemptive>true</usePreemptive>
+                  </head>
+                  <put>
+                    <params>
+                      <property>
+                        <name>http.protocol.expect-continue</name>
+                        <value>false</value>
+                      </property>
+                    </params>
+                  </put>
+                </httpConfiguration>
+              </configuration>
+            </server>
+          </servers>
+        </settings>
+        EOF
+

@@ -1,0 +1,70 @@
+name: 'Maven Deploy to GCP Artifact Registry'
+description: 'Authenticate and deploy Maven artifacts to GCP Artifact Registry'
+
+inputs:
+  module_path:
+    description: 'Path to the Maven module to deploy'
+    required: true
+  maven_registry:
+    description: 'Maven registry URL'
+    required: true
+  maven_repository:
+    description: 'Maven repository name'
+    required: true
+  maven_profiles:
+    description: 'Maven profiles to use (e.g., -Pno-spring)'
+    required: false
+    default: ''
+  maven_goals:
+    description: 'Maven goals (default: deploy)'
+    required: false
+    default: 'deploy'
+  maven_args:
+    description: 'Additional Maven arguments'
+    required: false
+    default: '-DskipTests -DskipImage=true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Deploy Maven artifacts
+      shell: bash
+      run: |
+        cd ${{ inputs.module_path }}
+        ACCESS_TOKEN=$(gcloud auth print-access-token)
+        # Create settings.xml with fresh token and full configuration
+        cat > ~/.m2/settings.xml <<EOF
+        <settings>
+          <servers>
+            <server>
+              <id>gcp-maven-repo</id>
+              <username>oauth2accesstoken</username>
+              <password>${ACCESS_TOKEN}</password>
+              <configuration>
+                <httpConfiguration>
+                  <get>
+                    <usePreemptive>true</usePreemptive>
+                  </get>
+                  <head>
+                    <usePreemptive>true</usePreemptive>
+                  </head>
+                  <put>
+                    <params>
+                      <property>
+                        <name>http.protocol.expect-continue</name>
+                        <value>false</value>
+                      </property>
+                    </params>
+                  </put>
+                </httpConfiguration>
+              </configuration>
+            </server>
+          </servers>
+        </settings>
+        EOF
+        MAVEN_REPO_URL="https://${{ inputs.maven_registry }}/maven/${{ inputs.maven_repository }}"
+        mvn ${{ inputs.maven_goals }} ${{ inputs.maven_args }} ${{ inputs.maven_profiles }} \
+          -DaltDeploymentRepository=gcp-maven-repo::default::${MAVEN_REPO_URL} \
+          -Dmaven.registry=${{ inputs.maven_registry }} \
+          -Dmaven.repository=${{ inputs.maven_repository }}
+

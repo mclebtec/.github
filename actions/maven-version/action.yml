@@ -1,0 +1,32 @@
+name: 'Maven Version Management'
+description: 'Update or reset Maven project version'
+
+inputs:
+  module_path:
+    description: 'Path to the Maven module'
+    required: true
+  version:
+    description: 'Version to set (if not provided, resets to SNAPSHOT)'
+    required: false
+  reset_to_snapshot:
+    description: 'Reset version to 1.0.0-SNAPSHOT'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Update Maven version
+      if: inputs.reset_to_snapshot == 'false' && inputs.version != ''
+      shell: bash
+      run: |
+        cd ${{ inputs.module_path }}
+        mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
+
+    - name: Reset version to SNAPSHOT
+      if: inputs.reset_to_snapshot == 'true'
+      shell: bash
+      run: |
+        cd ${{ inputs.module_path }}
+        mvn versions:set -DnewVersion=1.0.0-SNAPSHOT -DgenerateBackupPoms=false || true
+

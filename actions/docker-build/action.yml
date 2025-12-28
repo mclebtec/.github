@@ -1,0 +1,25 @@
+name: 'Docker Build and Publish'
+description: 'Build and publish Docker image using Maven'
+
+inputs:
+  module_path:
+    description: 'Path to the Maven module'
+    required: true
+  docker_registry:
+    description: 'Docker registry URL'
+    required: true
+  docker_repository:
+    description: 'Docker repository name'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build and publish Docker image
+      shell: bash
+      run: |
+        cd ${{ inputs.module_path }}
+        mvn clean verify -DskipTests -DskipImage=false \
+          -DDOCKER_REGISTRY=${{ inputs.docker_registry }} \
+          -DDOCKER_REPOSITORY=${{ inputs.docker_repository }}
+

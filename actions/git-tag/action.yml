@@ -1,0 +1,26 @@
+name: 'Create Git Tag'
+description: 'Create and push a Git tag for the release'
+
+inputs:
+  module_name:
+    description: 'Module name for the tag'
+    required: true
+  version:
+    description: 'Version for the tag'
+    required: true
+  github_token:
+    description: 'GitHub token for pushing'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create and push tag
+      shell: bash
+      run: |
+        TAG="${{ inputs.module_name }}-v${{ inputs.version }}"
+        git tag -a "$TAG" -m "Release ${{ inputs.module_name }} version ${{ inputs.version }}"
+        git push origin "$TAG"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+
