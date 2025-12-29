@@ -1,0 +1,118 @@
+name: 'GCP Build and Publish'
+description: |
+  Builds Maven projects and publishes to GCP Artifact Registry.
+  
+  This action handles:
+  - Maven package building and deployment to GCP Artifact Registry
+  - Docker image building and publishing to GCP Artifact Registry (for master)
+  - Version management (auto-generated for master, custom for PRs)
+  - Git tagging (for master releases)
+  
+  This is a GCP-specific implementation. For other cloud providers, use their respective actions.
+
+inputs:
+  gcp-credentials:
+    description: 'GCP service account credentials JSON'
+    required: true
+  maven-repository:
+    description: 'Maven repository name'
+    required: false
+  maven-location:
+    description: 'Maven repository location (default: us-central1)'
+    required: false
+    default: 'us-central1'
+  docker-registry:
+    description: 'Docker registry URL'
+    required: false
+  event-type:
+    description: 'Event type: pull_request or push'
+    required: true
+  branch-ref:
+    description: 'Git branch reference'
+    required: true
+
+outputs:
+  repository-url:
+    description: 'Maven repository URL'
+    value: ${{ steps.maven-config.outputs.repository-url }}
+  version:
+    description: 'Version used for build'
+    value: ${{ steps.build.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure Git
+      shell: bash
+      run: |
+        bash .github/scripts/configure-git.sh
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ inputs.gcp-credentials }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Maven for GCP Artifact Registry
+      id: maven-config
+      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
+      shell: bash
+      run: |
+        bash .github/scripts/configure-maven-artifact-registry.sh
+      env:
+        MAVEN_REPOSITORY_VAR: ${{ inputs.maven-repository }}
+        MAVEN_LOCATION_VAR: ${{ inputs.maven-location }}
+
+    - name: Extract Repository URL
+      id: repo-url
+      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
+      shell: bash
+      run: |
+        # Read repository URL from maven-config output
+        REPO_URL="${{ steps.maven-config.outputs.repository-url }}"
+        if [ -n "${REPO_URL}" ]; then
+          echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
+          echo "Repository URL extracted: ${REPO_URL}"
+        else
+          echo "::error::Repository URL not found in maven-config outputs"
+          exit 1
+        fi
+
+    - name: Configure Docker for GCP Artifact Registry
+      if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
+      shell: bash
+      run: |
+        bash .github/scripts/configure-docker-artifact-registry.sh
+      env:
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+
+    - name: Build and Publish
+      id: build
+      shell: bash
+      run: |
+        if [ "${{ inputs.event-type }}" == "pull_request" ]; then
+          # PR to master: deploy with version from POM + branch name + commit hash
+          bash .github/scripts/build-pr-version.sh
+          # Extract version for output
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.event-type }}" == "push" ] && [ "${{ inputs.branch-ref }}" == "refs/heads/master" ]; then
+          # Merge to master: automatically generate version and publish
+          bash .github/scripts/generate-version.sh
+          bash .github/scripts/build-master-version.sh
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+        else
+          # Other: just build
+          mvn clean package -DskipTests -Dmaven.javadoc.skip=true
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        fi
+      env:
+        MAVEN_REGISTRY: ${{ env.MAVEN_REGISTRY }}
+        MAVEN_REPOSITORY: ${{ env.MAVEN_REPOSITORY }}
+        DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+        DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
+        REPO_URL: ${{ env.REPO_URL }}
+
