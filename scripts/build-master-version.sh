@@ -19,8 +19,12 @@ mvn versions:set -DnewVersion=${NEW_VERSION} -DprocessAllModules -DgenerateBacku
 
 # Build and deploy Maven packages and Docker images with the new version
 echo "Building and publishing Docker images to ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}"
-mvn clean deploy -Pdocker-build -DskipTests -Dmaven.javadoc.skip=true -Ddocker.publish=true \
-  -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
+
+# mvn clean deploy -Pdocker-build -DskipTests -Dmaven.javadoc.skip=true -Ddocker.publish=true \
+#   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
+
+mvn clean deploy -Pdocker-build -DskipTests -Dmaven.javadoc.skip=true \
+  -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}  
 
 echo "✓ Maven packages and Docker images published successfully with version ${NEW_VERSION}"
 
