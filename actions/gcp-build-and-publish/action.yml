@@ -100,7 +100,7 @@ runs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
         elif [ "${{ inputs.event-type }}" == "push" ] && [ "${{ inputs.branch-ref }}" == "refs/heads/master" ]; then
           # Merge to master: automatically generate version and publish
-          bash .github/scripts/generate-version.sh
+          source .github/scripts/generate-version.sh
           bash .github/scripts/build-master-version.sh
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
         else

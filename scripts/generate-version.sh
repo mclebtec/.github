@@ -30,7 +30,8 @@ else
   echo "New version: ${NEW_VERSION}"
 fi
 
-# Store version for use in next step
+# Store version for use in next step and current shell session
+export NEW_VERSION
 echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
 echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
