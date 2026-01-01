@@ -13,6 +13,15 @@ if [ -z "${REPO_URL}" ]; then
   exit 1
 fi
 
+# Ensure Docker is authenticated before building
+if [ -n "${DOCKER_REGISTRY}" ]; then
+  echo "Authenticating Docker for registry: ${DOCKER_REGISTRY}"
+  gcloud auth configure-docker "${DOCKER_REGISTRY}" --quiet
+  gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}"
+  echo "✓ Docker authenticated"
+fi
+
+
 # Set the new version in all POM files
 echo "Setting version to ${NEW_VERSION} in all POM files..."
 mvn versions:set -DnewVersion=${NEW_VERSION} -DprocessAllModules -DgenerateBackupPoms=false
