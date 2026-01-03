@@ -4,7 +4,7 @@ description: |
   
   This action handles:
   - Maven package building and deployment to GCP Artifact Registry
-  - Docker image building and publishing to GCP Artifact Registry (for master)
+  - Docker image building and publishing to GCP Artifact Registry (for master only)
   - Version management (auto-generated for master, custom for PRs)
   - Git tagging (for master releases)
   
