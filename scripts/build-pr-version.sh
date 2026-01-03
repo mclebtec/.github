@@ -26,6 +26,30 @@ fi
 VERSION=$(echo "${BASE_VERSION}" | sed 's/-SNAPSHOT$//')-SNAPSHOT-${SANITIZED_BRANCH}-${COMMIT_HASH}
 echo "Setting version to: ${VERSION}"
 
+# Verify REPO_URL is set
+if [ -z "${REPO_URL}" ]; then
+  echo "::error::REPO_URL not set, cannot deploy"
+  exit 1
+fi
+
+echo "Deploying to repository: ${REPO_URL}"
+echo "Using server ID: artifact-registry"
+
+# Refresh access token and update settings.xml before deployment
+# Tokens can expire, so refresh right before deployment
+ACCESS_TOKEN=$(gcloud auth print-access-token)
+if [ -z "$ACCESS_TOKEN" ]; then
+  echo "::error::Failed to get access token for deployment"
+  exit 1
+fi
+
+# Update settings.xml with fresh token
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' "s|<password>[^<]*</password>|<password>${ACCESS_TOKEN}</password>|" ~/.m2/settings.xml
+else
+  sed -i "s|<password>[^<]*</password>|<password>${ACCESS_TOKEN}</password>|" ~/.m2/settings.xml
+fi
+
 # Set version using versions:set plugin, then deploy
 mvn versions:set -DnewVersion=${VERSION} -DprocessAllModules
 mvn clean deploy -DskipTests -Dmaven.javadoc.skip=true \
