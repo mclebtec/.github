@@ -38,6 +38,18 @@ if [ -z "$ACCESS_TOKEN" ]; then
   exit 1
 fi
 
+# Export access token as environment variable for Spring Boot Maven plugin
+# The plugin expects GCP_ACCESS_TOKEN for publish.registry.password
+export GCP_ACCESS_TOKEN="${ACCESS_TOKEN}"
+
+# Refresh Docker authentication with fresh token right before Maven build
+# The Spring Boot Maven plugin needs fresh Docker credentials
+if [ -n "${DOCKER_REGISTRY}" ]; then
+  echo "Refreshing Docker authentication with fresh token..."
+  echo "${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}"
+  echo "✓ Docker authentication refreshed"
+fi
+
 # Update settings.xml with fresh token
 if [[ "$OSTYPE" == "darwin"* ]]; then
   sed -i '' "s|<password>[^<]*</password>|<password>${ACCESS_TOKEN}</password>|" ~/.m2/settings.xml
