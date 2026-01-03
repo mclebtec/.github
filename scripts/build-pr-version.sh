@@ -52,7 +52,35 @@ fi
 
 # Set version using versions:set plugin, then deploy
 mvn versions:set -DnewVersion=${VERSION} -DprocessAllModules
-mvn clean deploy -DskipTests -Dmaven.javadoc.skip=true \
+
+# Verify settings.xml exists and has correct configuration
+if [ ! -f ~/.m2/settings.xml ]; then
+  echo "::error::settings.xml not found. Maven configuration may be missing."
+  exit 1
+fi
+
+echo "Verifying Maven settings.xml configuration..."
+grep -q "artifact-registry" ~/.m2/settings.xml || {
+  echo "::error::Server ID 'artifact-registry' not found in settings.xml"
+  exit 1
+}
+
+# Deploy with explicit configuration to override any POM skip settings
+# The altDeploymentRepository format is: serverId::layout::repositoryUrl
+echo "Deployment configuration:"
+echo "  Repository URL: ${REPO_URL}"
+echo "  Server ID: artifact-registry"
+echo "  Layout: default"
+
+# Override any skip configuration in the POM using system properties
+# These properties override plugin configuration in pom.xml
+mvn clean deploy \
+  -DskipTests \
+  -Dmaven.javadoc.skip=true \
+  -Dmaven.deploy.skip=false \
+  -Ddeploy.skip=false \
+  -Dmaven.deploy.plugin.skip=false \
+  -Dorg.apache.maven.plugins.maven-deploy-plugin.skip=false \
   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
 
 echo "✓ Maven packages deployed successfully with version ${VERSION}"

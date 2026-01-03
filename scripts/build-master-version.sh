@@ -21,7 +21,6 @@ if [ -n "${DOCKER_REGISTRY}" ]; then
   echo "✓ Docker authenticated"
 fi
 
-
 # Set the new version in all POM files
 echo "Setting version to ${NEW_VERSION} in all POM files..."
 mvn versions:set -DnewVersion=${NEW_VERSION} -DprocessAllModules -DgenerateBackupPoms=false
@@ -46,7 +45,27 @@ else
   sed -i "s|<password>[^<]*</password>|<password>${ACCESS_TOKEN}</password>|" ~/.m2/settings.xml
 fi
 
-mvn clean deploy -Pdocker-build -DskipTests -Dmaven.javadoc.skip=true \
+# Verify settings.xml exists and has correct configuration
+if [ ! -f ~/.m2/settings.xml ]; then
+  echo "::error::settings.xml not found. Maven configuration may be missing."
+  exit 1
+fi
+
+echo "Verifying Maven settings.xml configuration..."
+grep -q "artifact-registry" ~/.m2/settings.xml || {
+  echo "::error::Server ID 'artifact-registry' not found in settings.xml"
+  exit 1
+}
+
+# Override any skip configuration in the POM using system properties
+# These properties override plugin configuration in pom.xml
+mvn clean deploy -Pdocker-build \
+  -DskipTests \
+  -Dmaven.javadoc.skip=true \
+  -Dmaven.deploy.skip=false \
+  -Ddeploy.skip=false \
+  -Dmaven.deploy.plugin.skip=false \
+  -Dorg.apache.maven.plugins.maven-deploy-plugin.skip=false \
   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}  
 
 echo "✓ Maven packages and Docker images published successfully with version ${NEW_VERSION}"
