@@ -28,9 +28,23 @@ mvn versions:set -DnewVersion=${NEW_VERSION} -DprocessAllModules -DgenerateBacku
 
 # Build and deploy Maven packages and Docker images with the new version
 echo "Building and publishing Docker images to ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}"
+echo "Deploying Maven packages to repository: ${REPO_URL}"
+echo "Using server ID: artifact-registry"
 
-# mvn clean deploy -Pdocker-build -DskipTests -Dmaven.javadoc.skip=true -Ddocker.publish=true \
-#   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
+# Refresh access token and update settings.xml before deployment
+# Tokens can expire, so refresh right before deployment
+ACCESS_TOKEN=$(gcloud auth print-access-token)
+if [ -z "$ACCESS_TOKEN" ]; then
+  echo "::error::Failed to get access token for deployment"
+  exit 1
+fi
+
+# Update settings.xml with fresh token
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' "s|<password>[^<]*</password>|<password>${ACCESS_TOKEN}</password>|" ~/.m2/settings.xml
+else
+  sed -i "s|<password>[^<]*</password>|<password>${ACCESS_TOKEN}</password>|" ~/.m2/settings.xml
+fi
 
 mvn clean deploy -Pdocker-build -DskipTests -Dmaven.javadoc.skip=true \
   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}  

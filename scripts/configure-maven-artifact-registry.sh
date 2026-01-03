@@ -25,15 +25,18 @@ echo "Using GCP Project: ${GCP_PROJECT}"
 echo "Using Maven Repository: ${MAVEN_REPOSITORY}"
 echo "Using Location: ${MAVEN_LOCATION}"
 
-# Generate Maven settings using gcloud and extract only XML content
-# gcloud outputs XML plus instructions, so we extract only the <settings>...</settings> block
-TEMP_SETTINGS=$(mktemp)
-if ! gcloud artifacts print-settings mvn \
+# Verify authentication and get access token
+ACCESS_TOKEN=$(gcloud auth print-access-token)
+if [ -z "$ACCESS_TOKEN" ]; then
+  echo "::error::Failed to get access token. Ensure authentication is configured."
+  exit 1
+fi
+
+# Verify repository exists and we have access
+if ! gcloud artifacts repositories describe ${MAVEN_REPOSITORY} \
   --project=${GCP_PROJECT} \
-  --repository=${MAVEN_REPOSITORY} \
-  --location=${MAVEN_LOCATION} 2>&1 | \
-  sed -n '/^<settings/,/^<\/settings>/p' > ${TEMP_SETTINGS}; then
-  echo "::error::Failed to configure Maven for Artifact Registry"
+  --location=${MAVEN_LOCATION} > /dev/null 2>&1; then
+  echo "::error::Repository ${MAVEN_REPOSITORY} not found or not accessible"
   echo "::error::Service account needs 'Artifact Registry Writer' role (roles/artifactregistry.writer)"
   SERVICE_ACCOUNT=$(gcloud config get-value account 2>/dev/null || echo "unknown")
   echo "::error::Current service account: ${SERVICE_ACCOUNT}"
@@ -42,21 +45,40 @@ if ! gcloud artifacts print-settings mvn \
   echo "::error::    --location=${MAVEN_LOCATION} \\"
   echo "::error::    --member=serviceAccount:${SERVICE_ACCOUNT} \\"
   echo "::error::    --role=roles/artifactregistry.writer"
-  rm -f ${TEMP_SETTINGS}
   exit 1
 fi
 
-# Update server ID to 'artifact-registry' to match build scripts
-# This ensures the server ID in -DaltDeploymentRepository matches settings.xml
-# Replace the server ID (typically the repository name) with 'artifact-registry'
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  # macOS uses BSD sed (requires empty string after -i)
-  sed -i '' 's/\(<id>\)[^<]*\(<\/id>\)/\1artifact-registry\2/' ${TEMP_SETTINGS}
-else
-  # Linux uses GNU sed
-  sed -i 's/\(<id>\)[^<]*\(<\/id>\)/\1artifact-registry\2/' ${TEMP_SETTINGS}
-fi
-mv ${TEMP_SETTINGS} ~/.m2/settings.xml
+# Create Maven settings.xml with OAuth token authentication
+# This matches the pattern used in maven-deploy action for GitHub Actions compatibility
+cat > ~/.m2/settings.xml <<EOF
+<settings>
+  <servers>
+    <server>
+      <id>artifact-registry</id>
+      <username>oauth2accesstoken</username>
+      <password>${ACCESS_TOKEN}</password>
+      <configuration>
+        <httpConfiguration>
+          <get>
+            <usePreemptive>true</usePreemptive>
+          </get>
+          <head>
+            <usePreemptive>true</usePreemptive>
+          </head>
+          <put>
+            <params>
+              <property>
+                <name>http.protocol.expect-continue</name>
+                <value>false</value>
+              </property>
+            </params>
+          </put>
+        </httpConfiguration>
+      </configuration>
+    </server>
+  </servers>
+</settings>
+EOF
 
 # Construct repository URL: https://{location}-maven.pkg.dev/{project}/{repository}
 REPO_URL="https://${MAVEN_LOCATION}-maven.pkg.dev/${GCP_PROJECT}/${MAVEN_REPOSITORY}"
