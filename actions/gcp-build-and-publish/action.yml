@@ -6,7 +6,6 @@ description: |
   - Maven package building and deployment to GCP Artifact Registry
   - Docker image building and publishing to GCP Artifact Registry (for master only)
   - Version management (auto-generated for master, custom for PRs)
-  - Git tagging (for master releases)
   
   This is a GCP-specific implementation. For other cloud providers, use their respective actions.
 
@@ -42,11 +41,13 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    # Git Configuration (split into git-config action)
     - name: Configure Git
       shell: bash
       run: |
         bash .github/scripts/configure-git.sh
 
+    # GCP Authentication (split into gcp-auth action)
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
@@ -55,6 +56,7 @@ runs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
+    # Maven Configuration (split into gcp-maven-config action)
     - name: Configure Maven for GCP Artifact Registry
       id: maven-config
       if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
@@ -65,6 +67,7 @@ runs:
         MAVEN_REPOSITORY_VAR: ${{ inputs.maven-repository }}
         MAVEN_LOCATION_VAR: ${{ inputs.maven-location }}
 
+    # Extract Repository URL (split into repo-url action)
     - name: Extract Repository URL
       id: repo-url
       if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
@@ -80,6 +83,7 @@ runs:
           exit 1
         fi
 
+    # Docker Configuration (split into gcp-docker-config action)
     - name: Configure Docker for GCP Artifact Registry
       if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
       shell: bash

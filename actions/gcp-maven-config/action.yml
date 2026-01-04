@@ -1,0 +1,29 @@
+name: 'GCP Maven Configuration'
+description: 'Configure Maven for GCP Artifact Registry'
+
+inputs:
+  maven-repository:
+    description: 'Maven repository name'
+    required: false
+  maven-location:
+    description: 'Maven repository location (default: us-central1)'
+    required: false
+    default: 'us-central1'
+
+outputs:
+  repository-url:
+    description: 'Maven repository URL'
+    value: ${{ steps.config.outputs.repository-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure Maven for GCP Artifact Registry
+      id: config
+      shell: bash
+      run: |
+        bash .github/scripts/configure-maven-artifact-registry.sh
+      env:
+        MAVEN_REPOSITORY_VAR: ${{ inputs.maven-repository }}
+        MAVEN_LOCATION_VAR: ${{ inputs.maven-location }}
+
