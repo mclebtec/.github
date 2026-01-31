@@ -1,0 +1,71 @@
+name: 'Build and Publish Helm Charts'
+description: 'Build and publish all Helm charts found in opt/helm directories to GCP Artifact Registry'
+
+inputs:
+  chart_version:
+    description: 'Chart version to use'
+    required: false
+    default: '0.1.0'
+  app_version:
+    description: 'App version to use'
+    required: false
+    default: '1.0.0'
+  docker_registry:
+    description: 'Docker registry URL'
+    required: true
+  docker_repository:
+    description: 'Docker repository path'
+    required: true
+  gcp_project_id:
+    description: 'GCP Project ID'
+    required: true
+  push_charts:
+    description: 'Whether to push charts to registry'
+    required: false
+    default: 'true'
+  create_releases:
+    description: 'Whether to create GitHub releases'
+    required: false
+    default: 'false'
+  helm_suffix:
+    description: 'Suffix to add to chart names in registry'
+    required: false
+    default: 'helm'
+  github_token:
+    description: 'GitHub token for creating releases'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Helm
+      shell: bash
+      run: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        helm version
+
+    - name: Authenticate to GCP Artifact Registry
+      shell: bash
+      env:
+        DOCKER_REGISTRY: ${{ inputs.docker_registry }}
+      run: |
+        gcloud auth configure-docker "${{ inputs.docker_registry }}" --quiet
+        gcloud auth print-access-token | helm registry login "${{ inputs.docker_registry }}" \
+          --username oauth2accesstoken \
+          --password-stdin
+
+    - name: Find and process Helm charts
+      shell: bash
+      env:
+        CHART_VERSION: ${{ inputs.chart_version }}
+        APP_VERSION: ${{ inputs.app_version }}
+        DOCKER_REGISTRY: ${{ inputs.docker_registry }}
+        DOCKER_REPOSITORY: ${{ inputs.docker_repository }}
+        GCP_PROJECT_ID: ${{ inputs.gcp_project_id }}
+        PUSH_CHARTS: ${{ inputs.push_charts }}
+        CREATE_RELEASES: ${{ inputs.create_releases }}
+        HELM_SUFFIX: ${{ inputs.helm_suffix }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        bash .github/scripts/build-and-publish-helm-chart.sh

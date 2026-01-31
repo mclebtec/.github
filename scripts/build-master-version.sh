@@ -17,7 +17,19 @@ fi
 if [ -n "${DOCKER_REGISTRY}" ]; then
   echo "Authenticating Docker for registry: ${DOCKER_REGISTRY}"
   gcloud auth configure-docker "${DOCKER_REGISTRY}" --quiet
-  gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}"
+  
+  # Get token and login explicitly
+  INITIAL_TOKEN=$(gcloud auth print-access-token)
+  if [ -z "$INITIAL_TOKEN" ]; then
+    echo "::error::Failed to get access token for Docker login"
+    exit 1
+  fi
+  
+  # Use printf to avoid adding extra newline, and verify login succeeds
+  printf '%s' "${INITIAL_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}" || {
+    echo "::error::Docker login failed"
+    exit 1
+  }
   echo "✓ Docker authenticated"
 fi
 
@@ -46,7 +58,11 @@ export GCP_ACCESS_TOKEN="${ACCESS_TOKEN}"
 # The Spring Boot Maven plugin needs fresh Docker credentials
 if [ -n "${DOCKER_REGISTRY}" ]; then
   echo "Refreshing Docker authentication with fresh token..."
-  echo "${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}"
+  # Use printf to avoid adding extra newline, and verify login succeeds
+  printf '%s' "${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}" || {
+    echo "::error::Docker login refresh failed"
+    exit 1
+  }
   echo "✓ Docker authentication refreshed"
 fi
 
