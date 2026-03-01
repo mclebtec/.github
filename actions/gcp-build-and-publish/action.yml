@@ -2,6 +2,9 @@ name: 'GCP Build and Publish'
 description: |
   Builds Maven projects and publishes to GCP Artifact Registry.
   
+  **Required**: Caller workflow must run `actions/checkout` before this action so
+  `pom.xml` files exist for Maven cache key hashing.
+  
   This action handles:
   - Maven package building and deployment to GCP Artifact Registry
   - Docker image building and publishing to GCP Artifact Registry (for master only)
@@ -59,7 +62,7 @@ runs:
     - name: Cache Maven packages
       uses: actions/cache@v4
       with:
-        path: .m2/repository
+        path: ${{ env.HOME }}/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
