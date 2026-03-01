@@ -56,6 +56,14 @@ runs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: .m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
     # Maven Configuration (split into gcp-maven-config action)
     - name: Configure Maven for GCP Artifact Registry
       id: maven-config
