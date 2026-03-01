@@ -1,5 +1,6 @@
 #!/bin/bash
 # Build and publish all Helm charts found in opt/helm directories
+# Set HELM_DEBUG=1 for verbose debug output (repo_root, build_dir, etc.)
 # This script:
 # 1. Finds all Helm charts in opt/helm directories
 # 2. Updates Helm dependencies (for parent common charts)
@@ -34,6 +35,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Set HELM_DEBUG=1 for verbose error output
+HELM_DEBUG="${HELM_DEBUG:-0}"
+
 print_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -46,30 +50,37 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+print_debug() {
+    if [ "${HELM_DEBUG}" = "1" ]; then
+        echo -e "${BLUE}[DEBUG]${NC} $1"
+    fi
+}
+
 print_section() {
     echo -e "\n${BLUE}=== $1 ===${NC}\n"
 }
 
 # Authenticate Helm to OCI registry
 authenticate_helm() {
-    print_info "Authenticating to GCP Artifact Registry..."
-    if command -v gcloud &> /dev/null; then
-        gcloud auth configure-docker "${HELM_REGISTRY}" --quiet || {
-            print_warn "Failed to configure Docker authentication"
-            return 1
-        }
-        gcloud auth print-access-token | helm registry login "${HELM_REGISTRY}" \
-            --username oauth2accesstoken \
-            --password-stdin || {
-            print_warn "Failed to authenticate Helm to OCI registry"
-            return 1
-        }
-        print_info "Helm authentication successful"
-        return 0
-    else
+    print_info "Authenticating to GCP Artifact Registry (${HELM_REGISTRY})..."
+    if ! command -v gcloud &> /dev/null; then
         print_error "gcloud CLI not found. Cannot authenticate to OCI registry."
         return 1
     fi
+    if ! gcloud auth configure-docker "${HELM_REGISTRY}" --quiet; then
+        print_error "Failed to configure Docker authentication for ${HELM_REGISTRY}"
+        print_error "  Run: gcloud auth configure-docker ${HELM_REGISTRY}"
+        return 1
+    fi
+    if ! gcloud auth print-access-token | helm registry login "${HELM_REGISTRY}" \
+        --username oauth2accesstoken \
+        --password-stdin; then
+        print_error "Failed to authenticate Helm to OCI registry: ${HELM_REGISTRY}"
+        print_error "  Ensure gcloud is authenticated: gcloud auth login"
+        return 1
+    fi
+    print_info "Helm authentication successful"
+    return 0
 }
 
 # Update Helm dependencies for a chart
@@ -79,24 +90,30 @@ update_chart_dependencies() {
     
     if [ ! -f "${chart_dir}/Chart.yaml" ]; then
         print_error "Chart.yaml not found in ${chart_dir}"
+        print_error "  CWD: $(pwd)"
+        [ -d "${chart_dir}" ] && print_error "  Chart dir contents: $(ls -la "${chart_dir}" 2>&1)" || print_error "  Chart dir does not exist"
         return 1
     fi
     
-    helm dependency update "${chart_dir}" || {
+    if ! helm dependency update "${chart_dir}"; then
         print_error "Failed to update dependencies for ${chart_dir}"
+        print_error "  CWD: $(pwd)"
+        print_error "  Check Chart.yaml and charts/ subdirectory"
         return 1
-    }
+    fi
     
     print_info "Dependencies updated successfully"
     return 0
 }
 
 # Package a Helm chart
+# $1=chart_dir $2=chart_name $3=chart_version $4=app_version $5=destination_dir
 package_chart() {
     local chart_dir="$1"
     local chart_name="$2"
     local chart_version="$3"
     local app_version="$4"
+    local dest_dir="$5"
     
     print_info "Packaging chart: ${chart_name} (version: ${chart_version}, app: ${app_version})"
     
@@ -110,15 +127,22 @@ package_chart() {
         sed -i "s/^appVersion:.*/appVersion: \"${app_version}\"/" "${chart_dir}/Chart.yaml"
     fi
     
-    # Package the chart
-    helm package "${chart_dir}" --version "${chart_version}" --app-version "${app_version}" || {
+    # Package the chart to a known destination (helm package defaults to CWD which can vary)
+    mkdir -p "${dest_dir}"
+    if ! helm package "${chart_dir}" --version "${chart_version}" --app-version "${app_version}" --destination "${dest_dir}"; then
         print_error "Failed to package chart: ${chart_name}"
+        print_error "  chart_dir: ${chart_dir}"
+        print_error "  dest_dir: ${dest_dir}"
+        print_error "  CWD: $(pwd)"
         return 1
-    }
+    fi
     
-    local chart_file="${chart_name}-${chart_version}.tgz"
+    local chart_file="${dest_dir}/${chart_name}-${chart_version}.tgz"
     if [ ! -f "${chart_file}" ]; then
         print_error "Chart package not found: ${chart_file}"
+        print_error "  Expected path: ${chart_file}"
+        print_error "  dest_dir contents: $(ls -la "${dest_dir}" 2>&1)"
+        print_error "  CWD: $(pwd)"
         return 1
     fi
     
@@ -133,10 +157,21 @@ push_chart() {
     
     print_info "Pushing ${chart_file} to ${HELM_REPO_URL} as ${helm_chart_name}..."
     
-    helm push "${chart_file}" "oci://${HELM_REPO_URL}/${helm_chart_name}" || {
-        print_error "Failed to push chart: ${chart_file}"
+    if [ ! -f "${chart_file}" ]; then
+        print_error "Cannot push: chart file not found: ${chart_file}"
+        print_error "  Absolute path: $(cd "$(dirname "${chart_file}")" 2>/dev/null && pwd)/$(basename "${chart_file}")"
+        print_error "  CWD: $(pwd)"
+        print_error "  Parent dir contents: $(ls -la "$(dirname "${chart_file}")" 2>&1)"
         return 1
-    }
+    fi
+    
+    if ! helm push "${chart_file}" "oci://${HELM_REPO_URL}/${helm_chart_name}"; then
+        print_error "Failed to push chart: ${chart_file}"
+        print_error "  Target: oci://${HELM_REPO_URL}/${helm_chart_name}"
+        print_error "  File exists: $(test -f "${chart_file}" && echo yes || echo no)"
+        print_error "  CWD: $(pwd)"
+        return 1
+    fi
     
     print_info "Successfully pushed ${helm_chart_name}:${CHART_VERSION}"
     echo "oci://${HELM_REPO_URL}/${helm_chart_name}:${CHART_VERSION}"
@@ -167,24 +202,33 @@ create_github_release() {
     fi
     
     # Create release using GitHub CLI or API
-    if command -v gh &> /dev/null; then
-        gh release create "helm-${chart_name}-${CHART_VERSION}" \
-            "${chart_file}" \
-            --title "Helm Chart ${chart_name} v${CHART_VERSION}" \
-            --notes "Helm chart ${chart_name} version ${CHART_VERSION}
+    if ! command -v gh &> /dev/null; then
+        print_warn "GitHub CLI (gh) not found, skipping release creation"
+        return 0
+    fi
+    if [ ! -f "${chart_file}" ]; then
+        print_error "Cannot create release: chart file not found: ${chart_file}"
+        return 1
+    fi
+    if ! gh release create "helm-${chart_name}-${CHART_VERSION}" \
+        "${chart_file}" \
+        --title "Helm Chart ${chart_name} v${CHART_VERSION}" \
+        --notes "Helm chart ${chart_name} version ${CHART_VERSION}
 
 Chart URL: ${chart_url}
-App Version: ${APP_VERSION}" || {
-            print_warn "Failed to create GitHub release"
-        }
-    else
-        print_warn "GitHub CLI (gh) not found, skipping release creation"
+App Version: ${APP_VERSION}"; then
+        print_error "Failed to create GitHub release: helm-${chart_name}-${CHART_VERSION}"
+        print_error "  chart_file: ${chart_file}"
+        print_error "  Ensure GITHUB_TOKEN has repo scope"
+        return 1
     fi
 }
 
 # Main function to process a Helm chart
+# $1=chart_dir $2=build_dir
 process_chart() {
     local chart_dir="$1"
+    local build_dir="$2"
     local chart_name=$(basename "${chart_dir}")
     local helm_chart_name="${chart_name}-${HELM_SUFFIX}"
     
@@ -192,15 +236,15 @@ process_chart() {
     
     # Update dependencies
     if ! update_chart_dependencies "${chart_dir}"; then
-        print_error "Skipping chart due to dependency update failure"
+        print_error "Skipping chart ${chart_name} due to dependency update failure"
         return 1
     fi
     
     # Package chart
     local chart_file
-    chart_file=$(package_chart "${chart_dir}" "${chart_name}" "${CHART_VERSION}" "${APP_VERSION}")
+    chart_file=$(package_chart "${chart_dir}" "${chart_name}" "${CHART_VERSION}" "${APP_VERSION}" "${build_dir}")
     if [ $? -ne 0 ]; then
-        print_error "Skipping chart due to packaging failure"
+        print_error "Skipping chart ${chart_name} due to packaging failure"
         return 1
     fi
     
@@ -209,7 +253,7 @@ process_chart() {
     if [ "${PUSH_CHARTS}" = "true" ]; then
         chart_url=$(push_chart "${chart_file}" "${helm_chart_name}")
         if [ $? -ne 0 ]; then
-            print_error "Failed to push chart, but keeping .tgz file"
+            print_error "Failed to push chart ${chart_name} (file: ${chart_file}), continuing..."
         fi
     else
         print_info "Skipping push (set PUSH_CHARTS=true to enable)"
@@ -251,6 +295,10 @@ main() {
     
     # Find and process all charts
     local repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    local build_dir="${repo_root}/.helm-build"
+    mkdir -p "${build_dir}"
+    print_debug "repo_root: ${repo_root}"
+    print_debug "build_dir: ${build_dir}"
     local charts_found=0
     local charts_success=0
     local charts_failed=0
@@ -280,7 +328,7 @@ main() {
             continue
         fi
         
-        if process_chart "${chart_dir}"; then
+        if process_chart "${chart_dir}" "${build_dir}"; then
             charts_success=$((charts_success + 1))
         else
             charts_failed=$((charts_failed + 1))
@@ -292,7 +340,8 @@ main() {
     print_info "Total charts found: ${charts_found}"
     print_info "Successfully processed: ${charts_success}"
     if [ ${charts_failed} -gt 0 ]; then
-        print_error "Failed: ${charts_failed}"
+        print_error "Failed: ${charts_failed} chart(s)"
+        print_error "  Set HELM_DEBUG=1 for more verbose output"
         exit 1
     fi
     
