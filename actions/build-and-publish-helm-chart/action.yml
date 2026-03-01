@@ -19,14 +19,6 @@ inputs:
   gcp_project_id:
     description: 'GCP Project ID'
     required: true
-  push_charts:
-    description: 'Whether to push charts to registry'
-    required: false
-    default: 'true'
-  create_releases:
-    description: 'Whether to create GitHub releases'
-    required: false
-    default: 'false'
   helm_suffix:
     description: 'Suffix to add to chart names in registry'
     required: false
@@ -35,17 +27,31 @@ inputs:
     description: 'GitHub token for creating releases'
     required: false
     default: ''
+  gcp_credentials:
+    description: 'GCP service account JSON for auth'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
+    - name: Authenticate to Google Cloud
+      if: inputs.gcp_credentials != ''
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ inputs.gcp_credentials }}
+
+    - name: Set up Cloud SDK
+      if: inputs.gcp_credentials != ''
+      uses: google-github-actions/setup-gcloud@v2
+
     - name: Set up Helm
       shell: bash
       run: |
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
         helm version
 
-    - name: Authenticate to GCP Artifact Registry
+    - name: Configure Helm for Artifact Registry
       shell: bash
       env:
         DOCKER_REGISTRY: ${{ inputs.docker_registry }}
@@ -63,9 +69,21 @@ runs:
         DOCKER_REGISTRY: ${{ inputs.docker_registry }}
         DOCKER_REPOSITORY: ${{ inputs.docker_repository }}
         GCP_PROJECT_ID: ${{ inputs.gcp_project_id }}
-        PUSH_CHARTS: ${{ inputs.push_charts }}
-        CREATE_RELEASES: ${{ inputs.create_releases }}
+        PUSH_CHARTS: 'false'
+        CREATE_RELEASES: 'false'
         HELM_SUFFIX: ${{ inputs.helm_suffix }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
         bash .github/scripts/build-and-publish-helm-chart.sh
+
+    - name: Push Helm charts to Artifact Registry
+      shell: bash
+      run: |
+        OCI_REGISTRY="oci://${{ inputs.docker_registry }}/${{ inputs.docker_repository }}/${{ inputs.helm_suffix }}"
+        mkdir -p .helm-build
+        for tgz in .helm-build/*.tgz; do
+          [ -f "$tgz" ] || continue
+          echo "Pushing $tgz to $OCI_REGISTRY"
+          helm push "$tgz" "$OCI_REGISTRY"
+        done
+        echo "Charts pushed to $OCI_REGISTRY"
