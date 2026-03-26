@@ -5,14 +5,22 @@ description: |
   **Required**: Caller workflow must run `actions/checkout` before this action so
   `pom.xml` files exist for Maven cache key hashing.
   
+  **Maven cache**: Restore/cache `~/.m2/repository` in the workflow **before** this action
+  (e.g. `actions/cache` or `actions/setup-java` with `cache: maven`). Do not duplicate
+  both—use one approach only.
+  
   This action handles:
   - Maven package building and deployment to GCP Artifact Registry
   - Docker image building and publishing to GCP Artifact Registry (for master only)
   - Version management (auto-generated for master, custom for PRs)
   - Optional: Java test/coverage reports (JaCoCo HTML, Surefire/Failsafe XML) as workflow artifacts
+  - Optional: Markdown **job summary** (coverage table + Surefire totals) on the workflow run page
   
   **Artifacts**: Enable `upload-java-reports` (default) and grant the workflow `permissions.actions: write`
   so reports appear under Actions → run → Artifacts.
+  
+  **Job summary**: Enable `java-job-summary` (default). Open the workflow run → **Summary** tab for the table.
+  No extra permissions beyond the default `GITHUB_TOKEN`.
   
   This is a GCP-specific implementation. For other cloud providers, use their respective actions.
 
@@ -44,6 +52,10 @@ inputs:
     description: 'Days to keep java-reports artifacts'
     required: false
     default: '14'
+  java-job-summary:
+    description: 'Append JaCoCo/Surefire Markdown to the job Summary tab (GITHUB_STEP_SUMMARY)'
+    required: false
+    default: 'true'
 
 outputs:
   repository-url:
@@ -71,13 +83,8 @@ runs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: ${{ env.HOME }}/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
+    # Maven ~/.m2/repository cache is owned by the caller workflow (setup-java cache: maven
+    # and/or actions/cache) to avoid duplicate keys and failed cache saves.
 
     # Maven Configuration (split into gcp-maven-config action)
     - name: Configure Maven for GCP Artifact Registry
@@ -143,6 +150,11 @@ runs:
         DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         REPO_URL: ${{ env.REPO_URL }}
 
+    - name: Java test and coverage summary (job summary)
+      if: always() && inputs.java-job-summary == 'true'
+      shell: bash
+      run: bash .github/scripts/jacoco-github-step-summary.sh
+
     - name: Upload Java test and coverage reports
       if: always() && inputs.upload-java-reports == 'true'
       uses: actions/upload-artifact@v4
@@ -150,6 +162,7 @@ runs:
         name: java-reports-${{ github.run_id }}
         path: |
           **/target/site/jacoco/
+          **/target/site/jacoco-unit-test-coverage-report/
           **/target/surefire-reports/
           **/target/failsafe-reports/
         if-no-files-found: warn
