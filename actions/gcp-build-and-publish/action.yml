@@ -9,6 +9,10 @@ description: |
   - Maven package building and deployment to GCP Artifact Registry
   - Docker image building and publishing to GCP Artifact Registry (for master only)
   - Version management (auto-generated for master, custom for PRs)
+  - Optional: Java test/coverage reports (JaCoCo HTML, Surefire/Failsafe XML) as workflow artifacts
+  
+  **Artifacts**: Enable `upload-java-reports` (default) and grant the workflow `permissions.actions: write`
+  so reports appear under Actions → run → Artifacts.
   
   This is a GCP-specific implementation. For other cloud providers, use their respective actions.
 
@@ -32,6 +36,14 @@ inputs:
   branch-ref:
     description: 'Git branch reference'
     required: true
+  upload-java-reports:
+    description: 'Upload JaCoCo and Surefire/Failsafe reports as workflow artifacts (requires workflow permission actions:write)'
+    required: false
+    default: 'true'
+  java-reports-retention-days:
+    description: 'Days to keep java-reports artifacts'
+    required: false
+    default: '14'
 
 outputs:
   repository-url:
@@ -120,7 +132,7 @@ runs:
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
         else
           # Other: just build
-          mvn clean package -DskipTests -Dmaven.javadoc.skip=true
+          mvn clean package -Dmaven.javadoc.skip=true
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
         fi
@@ -130,4 +142,16 @@ runs:
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         REPO_URL: ${{ env.REPO_URL }}
+
+    - name: Upload Java test and coverage reports
+      if: always() && inputs.upload-java-reports == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: java-reports-${{ github.run_id }}
+        path: |
+          **/target/site/jacoco/
+          **/target/surefire-reports/
+          **/target/failsafe-reports/
+        if-no-files-found: warn
+        retention-days: ${{ inputs.java-reports-retention-days }}
 
