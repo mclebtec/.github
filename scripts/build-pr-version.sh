@@ -75,7 +75,6 @@ echo "  Layout: default"
 # Override any skip configuration in the POM using system properties
 # These properties override plugin configuration in pom.xml
 mvn clean deploy \
-  -DskipTests \
   -Dmaven.javadoc.skip=true \
   -Dmaven.deploy.skip=false \
   -Ddeploy.skip=false \
