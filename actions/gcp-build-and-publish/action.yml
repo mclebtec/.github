@@ -76,12 +76,12 @@ runs:
 
     # GCP Authentication (split into gcp-auth action)
     - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
+      uses: google-github-actions/auth@v3
       with:
         credentials_json: ${{ inputs.gcp-credentials }}
 
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
+      uses: google-github-actions/setup-gcloud@v3
 
     # Maven ~/.m2/repository cache is owned by the caller workflow (setup-java cache: maven
     # and/or actions/cache) to avoid duplicate keys and failed cache saves.
@@ -157,7 +157,7 @@ runs:
 
     - name: Upload Java test and coverage reports
       if: always() && inputs.upload-java-reports == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: java-reports-${{ github.run_id }}
         path: |
