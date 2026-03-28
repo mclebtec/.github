@@ -62,9 +62,9 @@ HELM_DOCKER_REGISTRY="${HELM_DOCKER_REGISTRY:-$DOCKER_REGISTRY}"
 HELM_DOCKER_REPOSITORY="${HELM_DOCKER_REPOSITORY:-$DOCKER_REPOSITORY}"
 HELM_IMAGE_TAG="${HELM_IMAGE_TAG:-$IMAGE_TAG}"
 
-HELM_DATA_VERSION=$(resolve_helm_mc_version "${HELM_DATA_VERSION:-}" helm.mc.data.version 0.1.3)
-HELM_PRESENTATION_VERSION=$(resolve_helm_mc_version "${HELM_PRESENTATION_VERSION:-}" helm.mc.presentation.version 0.1.3)
-HELM_GATEWAY_VERSION=$(resolve_helm_mc_version "${HELM_GATEWAY_VERSION:-}" helm.mc.gateway.version 0.1.4)
+HELM_DATA_VERSION=$(resolve_helm_mc_version "${HELM_DATA_VERSION:-}" helm.mc.data.version 0.x.x)
+HELM_PRESENTATION_VERSION=$(resolve_helm_mc_version "${HELM_PRESENTATION_VERSION:-}" helm.mc.presentation.version 0.x.x)
+HELM_GATEWAY_VERSION=$(resolve_helm_mc_version "${HELM_GATEWAY_VERSION:-}" helm.mc.gateway.version 0.x.x)
 
 echo "Helm mc-common-helm dependency versions: mc-data=${HELM_DATA_VERSION} mc-presentation=${HELM_PRESENTATION_VERSION} mc-gateway=${HELM_GATEWAY_VERSION}"
 
