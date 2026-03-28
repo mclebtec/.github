@@ -106,6 +106,19 @@ update_chart_dependencies() {
     return 0
 }
 
+# Lint a chart (after dependency update so charts/ exists when subcharts are declared)
+lint_chart() {
+    local chart_dir="$1"
+    print_info "Linting chart: ${chart_dir}"
+    if ! helm lint "${chart_dir}"; then
+        print_error "helm lint failed for ${chart_dir}"
+        print_error "  CWD: $(pwd)"
+        return 1
+    fi
+    print_info "Lint passed: ${chart_dir}"
+    return 0
+}
+
 # Package a Helm chart
 # $1=chart_dir $2=chart_name $3=chart_version $4=app_version $5=destination_dir
 package_chart() {
@@ -237,6 +250,11 @@ process_chart() {
     # Update dependencies
     if ! update_chart_dependencies "${chart_dir}"; then
         print_error "Skipping chart ${chart_name} due to dependency update failure"
+        return 1
+    fi
+
+    if ! lint_chart "${chart_dir}"; then
+        print_error "Skipping chart ${chart_name} due to lint failure"
         return 1
     fi
     
