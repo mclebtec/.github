@@ -22,12 +22,24 @@ description: |
   **Job summary**: Enable `java-job-summary` (default). Open the workflow run → **Summary** tab for the table.
   No extra permissions beyond the default `GITHUB_TOKEN`.
   
+  Authenticate with **either** Workload Identity Federation (`workload-identity-provider` + `service-account-email`)
+  **or** a JSON key (`gcp-credentials`). When the WIF inputs are both non-empty, the JSON key is ignored.
+
   This is a GCP-specific implementation. For other cloud providers, use their respective actions.
 
 inputs:
   gcp-credentials:
-    description: 'GCP service account credentials JSON'
-    required: true
+    description: 'GCP service account credentials JSON (used when WIF inputs are unset)'
+    required: false
+    default: ''
+  workload-identity-provider:
+    description: 'Full workload_identity_provider resource name (org secret PRIMECARE_GCP_DEV_WORKLOAD_IDENTITY_PROVIDER)'
+    required: false
+    default: ''
+  service-account-email:
+    description: 'GCP SA email for WIF — use org var PRIMECARE_GCP_ARTIFACT_CI_SA_EMAIL (terraform output artifact_registry_ci_service_account_email when split)'
+    required: false
+    default: ''
   maven-repository:
     description: 'Maven repository name'
     required: false
@@ -74,11 +86,25 @@ runs:
       run: |
         bash .github/scripts/configure-git.sh
 
-    # GCP Authentication (split into gcp-auth action)
-    - name: Authenticate to Google Cloud
+    - name: Authenticate to Google Cloud (Workload Identity Federation)
+      if: inputs.workload-identity-provider != '' && inputs.service-account-email != ''
+      uses: google-github-actions/auth@v3
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account-email }}
+
+    - name: Authenticate to Google Cloud (service account key)
+      if: (inputs.workload-identity-provider == '' || inputs.service-account-email == '') && inputs.gcp-credentials != ''
       uses: google-github-actions/auth@v3
       with:
         credentials_json: ${{ inputs.gcp-credentials }}
+
+    - name: Fail if GCP auth is not configured
+      if: (inputs.workload-identity-provider == '' || inputs.service-account-email == '') && inputs.gcp-credentials == ''
+      shell: bash
+      run: |
+        echo "::error::Provide either workload-identity-provider + service-account-email (WIF) or gcp-credentials (JSON key)."
+        exit 1
 
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v3
