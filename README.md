@@ -18,7 +18,14 @@ These actions should be copied to your organization's `.github` repository at:
 
 **Note**: These actions can be safely stored in a public `.github` repository and used by private repositories. All sensitive data (secrets, tokens, credentials) must be passed from the calling workflow.
 
-### Available Actions
+### `actions/` in this repo (root)
+
+| Action | Purpose |
+|--------|---------|
+| **load-environment-variables** | Merge `vars_json` (workflow `toJson(vars)`) with `environments.<name>` in a repo’s `.github/config/variables.yml`; export to `GITHUB_ENV`. Callers check out `mclebtec/.github` and symlink `actions` → `.github/actions`, then `uses: ./.github/actions/load-environment-variables`. |
+| **gcp-auth**, **gcp-build-and-publish**, **gcp-docker-config**, **gcp-maven-config**, **build-and-publish-helm-chart** | GCP / Maven / Helm composites (see each `action.yml`). |
+
+### Available Actions (legacy list — some names may differ from `actions/` above)
 
 1. **detect-module** - Detects Maven module path based on pattern and changed files
 2. **generate-version** - Generates version number based on branch and event type
