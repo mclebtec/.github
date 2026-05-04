@@ -1,0 +1,29 @@
+name: Load environment variables
+description: >
+  Uses keys under environments.<environment> in variables.yml as the checklist. For each key,
+  prefers a non-empty value from the workflow vars JSON; otherwise uses the value from variables.yml.
+  Exports resolved values to GITHUB_ENV. Callers pass vars_json from the workflow using toJson on the variables context.
+
+inputs:
+  vars_json:
+    description: JSON object of GitHub Variables for the current job; set from the workflow using the toJson function on the variables context.
+    required: true
+  environment:
+    description: Environment key matching environments.* in variables.yml (e.g. dev, qa, prod)
+    required: true
+  variables_file:
+    description: Repo-relative path to variables.yml containing environments.<name> blocks
+    required: false
+    default: .github/config/variables.yml
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve variables and load into GITHUB_ENV
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        VARS_JSON: ${{ inputs.vars_json }}
+      run: |
+        python3 -m pip install --quiet pyyaml
+        python3 "${{ github.action_path }}/load_env.py" "${{ inputs.variables_file }}" "${{ inputs.environment }}"
