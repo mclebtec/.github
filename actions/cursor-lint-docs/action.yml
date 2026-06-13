@@ -1,5 +1,5 @@
 name: Cursor lint — docs (Prettier)
-description: Strict Markdown Prettier check using cursor-lint bundle from mclebtec/.github
+description: Strict Markdown Prettier check using mclebtec/.github/config/markdown
 
 inputs:
   org-github-ref:
@@ -14,13 +14,15 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout cursor-lint bundle
+    - name: Checkout org config + lint scripts
       uses: actions/checkout@v6
       with:
         repository: mclebtec/.github
         ref: ${{ inputs.org-github-ref }}
         path: .mclebtec-github
-        sparse-checkout: cursor-lint
+        sparse-checkout: |
+          config/markdown
+          scripts/lint
         sparse-checkout-cone-mode: true
 
     - name: Set up Node.js
@@ -36,5 +38,5 @@ runs:
           test -f README.md
           test -f docs/README.md
         fi
-        chmod +x .mclebtec-github/cursor-lint/scripts/format-markdown.sh
-        .mclebtec-github/cursor-lint/scripts/format-markdown.sh --check
+        chmod +x .mclebtec-github/scripts/lint/format-markdown.sh
+        .mclebtec-github/scripts/lint/format-markdown.sh --check
