@@ -1,0 +1,40 @@
+name: Cursor lint — docs (Prettier)
+description: Strict Markdown Prettier check using cursor-lint bundle from mclebtec/.github
+
+inputs:
+  org-github-ref:
+    description: mclebtec/.github ref (branch or tag)
+    required: false
+    default: master
+  require-docs-hub:
+    description: Fail if README.md or docs/README.md missing
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout cursor-lint bundle
+      uses: actions/checkout@v6
+      with:
+        repository: mclebtec/.github
+        ref: ${{ inputs.org-github-ref }}
+        path: .mclebtec-github
+        sparse-checkout: cursor-lint
+        sparse-checkout-cone-mode: true
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+
+    - name: Strict docs lint
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ "${{ inputs.require-docs-hub }}" == "true" ]]; then
+          test -f README.md
+          test -f docs/README.md
+        fi
+        chmod +x .mclebtec-github/cursor-lint/scripts/format-markdown.sh
+        .mclebtec-github/cursor-lint/scripts/format-markdown.sh --check

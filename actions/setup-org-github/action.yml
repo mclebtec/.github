@@ -1,0 +1,57 @@
+name: Setup org .github
+description: Checkout mclebtec/.github and symlink actions/ and scripts/ into .github/
+
+inputs:
+  path:
+    description: Checkout directory
+    required: false
+    default: .github-global
+  ref:
+    description: mclebtec/.github ref
+    required: false
+    default: master
+  link-actions:
+    description: Symlink actions into .github/actions
+    required: false
+    default: "true"
+  link-scripts:
+    description: Symlink scripts into .github/scripts
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout mclebtec/.github
+      uses: actions/checkout@v6
+      with:
+        repository: mclebtec/.github
+        ref: ${{ inputs.ref }}
+        path: ${{ inputs.path }}
+
+    - name: Link org actions and scripts
+      shell: bash
+      run: |
+        set -euo pipefail
+        ORG="$(cd "${{ inputs.path }}" && pwd)"
+        mkdir -p .github
+        if [[ "${{ inputs.link-scripts }}" == "true" ]]; then
+          if [[ -d "${ORG}/scripts" ]]; then
+            ln -sfn "${ORG}/scripts" .github/scripts
+          elif [[ -d "${ORG}/.github/scripts" ]]; then
+            ln -sfn "${ORG}/.github/scripts" .github/scripts
+          else
+            echo "::error::No scripts/ in ${ORG}" >&2
+            exit 1
+          fi
+        fi
+        if [[ "${{ inputs.link-actions }}" == "true" ]]; then
+          if [[ -d "${ORG}/actions" ]]; then
+            ln -sfn "${ORG}/actions" .github/actions
+          elif [[ -d "${ORG}/.github/actions" ]]; then
+            ln -sfn "${ORG}/.github/actions" .github/actions
+          else
+            echo "::error::No actions/ in ${ORG}" >&2
+            exit 1
+          fi
+        fi

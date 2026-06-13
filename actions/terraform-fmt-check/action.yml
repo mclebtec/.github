@@ -1,0 +1,25 @@
+name: Terraform fmt check
+description: terraform fmt -check -recursive on a working directory
+
+inputs:
+  working-directory:
+    description: Directory containing .tf files
+    required: true
+  terraform-version:
+    description: Terraform CLI version
+    required: false
+    default: "1.9.8"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false
+
+    - name: Terraform fmt check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform fmt -check -recursive -diff .

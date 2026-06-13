@@ -1,0 +1,10 @@
+node_modules/
+.terraform/
+**/.dart_tool/
+**/build/
+**/target/
+**/coverage/
+**/.git/
+**/ios/Pods/
+**/.venv/
+**/Pods/
