@@ -4,11 +4,13 @@ This directory contains reusable composite actions that can be used across workf
 
 ## Security & Public Repository Safety
 
-✅ **All actions are safe for public repositories** - No secrets, credentials, or sensitive data are hardcoded in any action.
+✅ **All actions are safe for public repositories** - No secrets, credentials, or sensitive data are
+hardcoded in any action.
 
 - All secrets are passed as inputs from workflows
 - Secrets are managed at the workflow level, not in actions
-- Actions use authenticated contexts (e.g., `gcloud auth print-access-token`) that are set up in workflows
+- Actions use authenticated contexts (e.g., `gcloud auth print-access-token`) that are set up in
+  workflows
 - No API keys, passwords, or tokens are embedded in action code
 
 ## Actions for Organization-Level Setup
@@ -16,14 +18,24 @@ This directory contains reusable composite actions that can be used across workf
 These actions should be copied to your organization's `.github` repository at:
 `.github/actions/<action-name>/action.yml`
 
-**Note**: These actions can be safely stored in a public `.github` repository and used by private repositories. All sensitive data (secrets, tokens, credentials) must be passed from the calling workflow.
+**Note**: These actions can be safely stored in a public `.github` repository and used by private
+repositories. All sensitive data (secrets, tokens, credentials) must be passed from the calling
+workflow.
 
 ### `actions/` in this repo (root)
 
-| Action | Purpose |
-|--------|---------|
-| **load-environment-variables** | Merge `vars_json` (workflow `toJson(vars)`) with `environments.<name>` in a repo’s `.github/config/variables.yml`; export to `GITHUB_ENV`. Callers check out `mclebtec/.github` and symlink `actions` → `.github/actions`, then `uses: ./.github/actions/load-environment-variables`. |
-| **gcp-auth**, **gcp-build-and-publish**, **gcp-docker-config**, **gcp-maven-config**, **build-and-publish-helm-chart** | GCP / Maven / Helm composites (see each `action.yml`). |
+| Action                                                                                                                 | Purpose                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **setup-org-github**                                                                                                   | Checkout `mclebtec/.github` and symlink `actions/` + `scripts/` into `.github/`.                                                                                                                                                                                                     |
+| **cursor-lint-docs**                                                                                                   | Prettier `--check` on `**/*.md` using `cursor-lint/` bundle (no consumer vendoring).                                                                                                                                                                                                  |
+| **terraform-fmt-check**                                                                                                | `terraform fmt -check -recursive` on a working directory.                                                                                                                                                                                                                             |
+| **load-environment-variables**                                                                                         | Merge `vars_json` (workflow `toJson(vars)`) with `environments.<name>` in a repo’s `.github/config/variables.yml`; export to `GITHUB_ENV`. Callers check out `mclebtec/.github` and symlink `actions` → `.github/actions`, then `uses: ./.github/actions/load-environment-variables`. |
+| **gcp-auth**, **gcp-build-and-publish**, **gcp-docker-config**, **gcp-maven-config**, **build-and-publish-helm-chart** | GCP / Maven / Helm composites (see each `action.yml`).                                                                                                                                                                                                                                |
+
+### `cursor-lint/` (repo root)
+
+Markdown/shell lint config synced from private `cursor-rules`. Used by **cursor-lint-docs** and
+local scripts. See `cursor-lint/README.md`.
 
 ### Available Actions (legacy list — some names may differ from `actions/` above)
 
@@ -63,15 +75,17 @@ Or if using locally in the same repository:
 To move these actions to organization-level:
 
 1. Copy each action directory to your org `.github` repo:
+
    ```bash
    cp -r .github/actions/* <org-repo>/.github/actions/
    ```
 
 2. Update workflow files to reference org-level actions:
+
    ```yaml
    # Change from:
    uses: ./.github/actions/detect-module
-   
+
    # To:
    uses: <org-name>/.github/.github/actions/detect-module@main
    ```
@@ -82,11 +96,15 @@ To move these actions to organization-level:
 
 ### How Secrets Are Handled
 
-1. **GCP Authentication**: The `maven-deploy` action uses `gcloud auth print-access-token` which retrieves a token from the authenticated gcloud session. The GCP service account key is provided as a secret in the workflow (via `google-github-actions/auth@v2`), not in the action itself.
+1. **GCP Authentication**: The `maven-deploy` action uses `gcloud auth print-access-token` which
+   retrieves a token from the authenticated gcloud session. The GCP service account key is provided
+   as a secret in the workflow (via `google-github-actions/auth@v2`), not in the action itself.
 
-2. **GitHub Token**: The `git-tag` action requires a GitHub token, which must be passed as an input from the workflow. The workflow should use `secrets.GITHUB_TOKEN` or a custom token secret.
+2. **GitHub Token**: The `git-tag` action requires a GitHub token, which must be passed as an input
+   from the workflow. The workflow should use `secrets.GITHUB_TOKEN` or a custom token secret.
 
-3. **Maven/Docker Registry URLs**: All registry URLs and repository names are passed as inputs, never hardcoded.
+3. **Maven/Docker Registry URLs**: All registry URLs and repository names are passed as inputs,
+   never hardcoded.
 
 ### Best Practices
 
@@ -104,4 +122,3 @@ To move these actions to organization-level:
 - **Consistency**: Ensure all repos use the same build process
 - **Testability**: Test actions independently
 - **Security**: Safe for public repositories - no secrets embedded
-

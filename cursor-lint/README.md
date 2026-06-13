@@ -1,14 +1,27 @@
-# cursor-lint (public CI bundle)
+# cursor-lint
 
-Public mirror of lint config from private `mclebtec/cursor-rules` for GitHub Actions.
+Canonical **CI lint bundle** in `mclebtec/.github`. Mirrors `cursor-rules/config/markdown/` and
+`config/shell/` for workflows that cannot access the private `cursor-rules` repo.
 
-Consumer workflows check out **`mclebtec/.github`** (public — no PAT) and run scripts here.
-Local dev still uses sibling `../cursor-rules`.
+## Consumer usage (composite action — preferred)
 
-When updating Prettier or shfmt rules in `cursor-rules`, sync this folder before CI will pass.
+```yaml
+- uses: mclebtec/.github/actions/cursor-lint-docs@master
+```
+
+No vendored copy in consumer repos. Local dev still uses sibling `../cursor-rules`.
+
+## Sync from cursor-rules
 
 ```bash
-# From cursor-rules repo root
+cd cursor-rules
 rsync -a config/markdown/ ../.github/cursor-lint/config/markdown/
 rsync -a config/shell/ ../.github/cursor-lint/config/shell/
 ```
+
+## Scripts
+
+| Script | Purpose |
+| ------ | ------- |
+| `scripts/format-markdown.sh` | Prettier format/check |
+| `scripts/format-shell.sh` | shfmt format/check (local / optional) |
