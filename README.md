@@ -32,10 +32,17 @@ workflow.
 | **load-environment-variables**                                                                                         | Merge `vars_json` (workflow `toJson(vars)`) with `environments.<name>` in a repo’s `.github/config/variables.yml`; export to `GITHUB_ENV`. Callers check out `mclebtec/.github` and symlink `actions` → `.github/actions`, then `uses: ./.github/actions/load-environment-variables`. |
 | **gcp-auth**, **gcp-build-and-publish**, **gcp-docker-config**, **gcp-maven-config**, **build-and-publish-helm-chart** | GCP / Maven / Helm composites (see each `action.yml`).                                                                                                                                                                                                                                |
 
-### `cursor-lint/` (repo root)
+### `config/` + `scripts/lint/` (reusable CI)
 
-Markdown/shell lint config synced from private `cursor-rules`. Used by **cursor-lint-docs** and
-local scripts. See `cursor-lint/README.md`.
+| Path | Purpose |
+| ---- | ------- |
+| `config/markdown/` | Prettier — used by **cursor-lint-docs** |
+| `config/shell/` | shfmt EditorConfig reference |
+| `config/terraform/` | `terraform fmt` EditorConfig reference |
+| `scripts/lint/` | `format-markdown.sh`, `format-shell.sh` |
+| `scripts/sync-from-cursor-rules.sh` | Mirror configs from private `cursor-rules` |
+
+Author in **`cursor-rules`**, sync to this repo for public CI. See `config/README.md`.
 
 ### Available Actions (legacy list — some names may differ from `actions/` above)
 

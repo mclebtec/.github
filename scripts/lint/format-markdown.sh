@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# CI lint bundle — mirrors cursor-rules/config/markdown (public mclebtec/.github).
+# Format/check Markdown with Prettier (config: mclebtec/.github/config/markdown/).
 
 set -euo pipefail
 
 PRETTIER_VERSION="3.5.3"
 MODE="apply"
-BUNDLE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ORG_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 for arg in "$@"; do
   case "${arg}" in
@@ -26,8 +26,8 @@ if ! ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   exit 1
 fi
 
-CONFIG="${BUNDLE_ROOT}/config/markdown/prettier.config.mjs"
-IGNORE="${BUNDLE_ROOT}/config/markdown/.prettierignore"
+CONFIG="${ORG_ROOT}/config/markdown/prettier.config.mjs"
+IGNORE="${ORG_ROOT}/config/markdown/.prettierignore"
 
 if [[ ! -f "${CONFIG}" ]]; then
   echo "Missing ${CONFIG}" >&2

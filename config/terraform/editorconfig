@@ -1,0 +1,13 @@
+# Terraform / HCL — terraform fmt reference
+
+[*.tf]
+indent_style = space
+indent_size = 2
+
+[*.hcl]
+indent_style = space
+indent_size = 2
+
+[*.tfvars]
+indent_style = space
+indent_size = 2

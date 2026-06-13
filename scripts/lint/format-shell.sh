@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI lint bundle — mirrors cursor-rules/config/shell (public mclebtec/.github).
+# Format/check shell scripts with shfmt (-i 2 -ci -bn -sr).
 
 set -euo pipefail
 
