@@ -1,2 +1,10 @@
 /.idea/
 .DS_Store
+.env
+.env.*
+*.pem
+*.p12
+credentials.json
+*secret*.json
+id_rsa
+id_rsa.pub

@@ -1,4 +1,5 @@
-# Terraform / HCL — terraform fmt reference
+# Terraform / HCL — aligns with terraform fmt (HashiCorp canonical style)
+# Consumer: merge [*.tf] and [*.hcl] into repo-root .editorconfig (primecare-domain)
 
 [*.tf]
 indent_style = space

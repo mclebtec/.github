@@ -14,10 +14,11 @@ This organization maintains a collection of **composite GitHub Actions** designe
 
 ## Security First
 
-✅ All actions are **safe for public repositories**  
-✅ No secrets or credentials hardcoded  
-✅ All sensitive data passed from workflows  
-✅ GitHub secrets managed at the workflow level  
+This org’s **public** [`.github`](https://github.com/mclebtec/.github) repo holds only reusable
+actions and lint config — **no secrets, credentials, or private rules**.
+
+- Secrets stay in **private consumer workflows** (`secrets.*`, `vars.*`)
+- Config is mirrored from private `cursor-rules` via `publish-org-github-mirror.sh`  
 
 ## Getting Started
 

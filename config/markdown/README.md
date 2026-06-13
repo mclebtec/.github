@@ -1,5 +1,7 @@
-# Markdown (Prettier) — CI reusable
+# Markdown (Prettier) — public CI mirror
 
-Public mirror of `cursor-rules/config/markdown/`. CI: `actions/cursor-lint-docs`.
+Authoritative source: private `cursor-rules/config/markdown/`. Sync via `scripts/sync-from-cursor-rules.sh`.
 
-Local dev canonical source remains private `cursor-rules`.
+CI: `actions/cursor-lint-docs` · Local dev: consumer `./scripts/lint-docs.sh` via sibling `cursor-rules`.
+
+**No secrets** in this folder.

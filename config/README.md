@@ -1,33 +1,22 @@
-# Reusable configs (CI)
+# Reusable configs (public CI mirror)
 
-Public copies of lint/format config used by **composite actions** and consumer `build.yml` workflows.
-**Do not duplicate** these in consumer repos.
+Lint/format configs mirrored from private **`cursor-rules`**. **No secrets, credentials, or rules**
+belong in this public repo — see [SECURITY.md](../SECURITY.md).
 
-| Folder | Tool | Action / script |
-| ------ | ---- | ---------------- |
-| `markdown/` | Prettier | `actions/cursor-lint-docs`, `scripts/lint/format-markdown.sh` |
-| `shell/` | shfmt | `scripts/lint/format-shell.sh` (local/optional) |
+| Folder | Tool | CI |
+| ------ | ---- | -- |
+| `markdown/` | Prettier | `actions/cursor-lint-docs` |
+| `shell/` | shfmt EditorConfig | `scripts/lint/format-shell.sh` (local) |
 | `terraform/` | `terraform fmt` | `actions/terraform-fmt-check` |
 
-## Not here (local dev only — private `cursor-rules`)
+## Not mirrored (private `cursor-rules` only)
 
-| Folder | Reason |
-| ------ | ------ |
-| `dart/` | Flutter analyzer — local IDE/CI in app repo |
-| `intellij/` | Java IDE scheme — not needed in public CI bundle |
+`dart/`, `intellij/` — IDE/local tooling; may contain paths unsuitable for a public bundle.
 
-## Sync from cursor-rules
+## Sync
 
 ```bash
-./scripts/sync-from-cursor-rules.sh
+./scripts/sync-from-cursor-rules.sh   # from mclebtec/.github
+# or from cursor-rules:
+../cursor-rules/scripts/publish-org-github-mirror.sh
 ```
-
-Or manually:
-
-```bash
-rsync -a ../cursor-rules/config/markdown/ config/markdown/
-rsync -a ../cursor-rules/config/shell/ config/shell/
-rsync -a ../cursor-rules/config/terraform/ config/terraform/
-```
-
-Canonical authoring: **`mclebtec/cursor-rules`** (`rules-setup`). This repo is the **public CI mirror**.

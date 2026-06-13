@@ -1,4 +1,5 @@
-# Terraform — CI reusable
+# Terraform — public CI mirror
 
-CI enforcement: `actions/terraform-fmt-check` (`terraform fmt -check`). Mirror of
-`cursor-rules/config/terraform/editorconfig`.
+Authoritative source: private `cursor-rules/config/terraform/`. CI: `actions/terraform-fmt-check`.
+
+**No secrets** in this folder.

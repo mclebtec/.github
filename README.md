@@ -1,28 +1,16 @@
 # GitHub Actions
 
-This directory contains reusable composite actions that can be used across workflows.
+Reusable composite actions and **public CI config** for the `mclebtec` org.
 
-## Security & Public Repository Safety
+**This repo is public — no secrets or credentials.** See [SECURITY.md](SECURITY.md).
 
-✅ **All actions are safe for public repositories** - No secrets, credentials, or sensitive data are
-hardcoded in any action.
+## Security
 
-- All secrets are passed as inputs from workflows
-- Secrets are managed at the workflow level, not in actions
-- Actions use authenticated contexts (e.g., `gcloud auth print-access-token`) that are set up in
-  workflows
-- No API keys, passwords, or tokens are embedded in action code
+- All secrets are **inputs** from private consumer workflows
+- Reusable configs: `config/` (markdown, shell, terraform) — mirrored from private `cursor-rules`
+- Never commit `.env`, keys, tokens, or service-account JSON
 
-## Actions for Organization-Level Setup
-
-These actions should be copied to your organization's `.github` repository at:
-`.github/actions/<action-name>/action.yml`
-
-**Note**: These actions can be safely stored in a public `.github` repository and used by private
-repositories. All sensitive data (secrets, tokens, credentials) must be passed from the calling
-workflow.
-
-### `actions/` in this repo (root)
+## Actions (`actions/`)
 
 | Action                                                                                                                 | Purpose                                                                                                                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,7 +30,8 @@ workflow.
 | `scripts/lint/` | `format-markdown.sh`, `format-shell.sh` |
 | `scripts/sync-from-cursor-rules.sh` | Mirror configs from private `cursor-rules` |
 
-Author in **`cursor-rules`**, sync to this repo for public CI. See `config/README.md`.
+Author in **`cursor-rules`**, sync to this repo for public CI. See `config/README.md` and
+[SECURITY.md](SECURITY.md).
 
 ### Available Actions (legacy list — some names may differ from `actions/` above)
 
