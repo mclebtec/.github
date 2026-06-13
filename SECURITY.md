@@ -1,42 +1,25 @@
 # Security — public repository policy
 
-`mclebtec/.github` is **public**. Nothing in this repo may contain secrets, credentials, or
-private keys.
+`mclebtec/.github` is **public**. No secrets, credentials, Cursor rules, or lint policy configs
+belong here.
 
 ## Allowed
 
-- Composite action **inputs** that receive secrets from calling workflows
-- References to `secrets.*` / `vars.*` in **documentation only** (never values)
-- Public lint/format config (`config/markdown/`, `config/shell/`, `config/terraform/`)
-- Scripts that read credentials from **environment variables** at runtime (caller-provided)
+- Generic composite **actions** (GCP, Terraform fmt, org checkout/link)
+- Action **inputs** populated from private workflow `secrets.*` / `vars.*`
+- Scripts that read credentials from **environment variables** at runtime
 
 ## Forbidden
 
-- API keys, tokens, passwords, connection strings, service-account JSON files
-- `.env`, `credentials.json`, `*.pem`, `*.p12`, `id_rsa*`
-- Hardcoded org secret **values** (names in workflow docs are OK in private consumer repos only)
+- Cursor rules, `STRUCTURE_ID` manifests, Prettier/shfmt policy tied to Cursor workflows
+- API keys, tokens, passwords, service-account JSON
+- `.env`, `credentials.json`, `*.pem`, `id_rsa*`
 
-## Caller responsibility
+## Where Cursor config lives
 
-Consumer workflows (private repos) pass secrets:
-
-```yaml
-with:
-  workload-identity-provider: ${{ secrets.MY_WIF_PROVIDER }}
-  service-account-email: ${{ vars.CI_SA_EMAIL }}
-```
-
-## Mirror from `cursor-rules`
-
-Author config in private **`mclebtec/cursor-rules`**, then:
-
-```bash
-./scripts/sync-from-cursor-rules.sh
-```
-
-Review the diff before push — **never** sync rules, structure manifests, or storage profiles here.
+Private **`mclebtec/cursor-rules`** only. Consumer CI checks out `cursor-rules` for docs lint;
+generic steps use `mclebtec/.github/actions/*`.
 
 ## Report
 
-If you find committed secrets, rotate them immediately and open a private security issue with the
-org admin.
+Rotate any leaked secret immediately; contact org admin.

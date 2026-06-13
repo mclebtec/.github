@@ -1,8 +1,0 @@
-# Shell / Bash — shfmt (industry standard)
-# shfmt reads [*.sh] when run from repo root with EditorConfig present.
-
-[*.sh]
-indent_style = space
-indent_size = 2
-binary_next_line = true
-switch_case_indent = true
