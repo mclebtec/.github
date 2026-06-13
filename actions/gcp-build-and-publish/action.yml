@@ -33,11 +33,11 @@ inputs:
     required: false
     default: ''
   workload-identity-provider:
-    description: 'Full workload_identity_provider resource name (org secret PRIMECARE_GCP_DEV_WORKLOAD_IDENTITY_PROVIDER)'
+    description: 'Full workload_identity_provider resource name (pass from workflow secrets)'
     required: false
     default: ''
   service-account-email:
-    description: 'GCP SA email for WIF — use org var PRIMECARE_GCP_ARTIFACT_CI_SA_EMAIL (terraform output artifact_registry_ci_service_account_email when split)'
+    description: 'GCP service account email for WIF (pass from workflow secrets or variables)'
     required: false
     default: ''
   maven-repository:

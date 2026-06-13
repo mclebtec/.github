@@ -1,3 +1,5 @@
-# Shell (shfmt) — CI reusable
+# Shell (shfmt) — public CI mirror
 
-Public mirror of `cursor-rules/config/shell/`. Local: `./scripts/lint-shell.sh` via `cursor-rules`.
+Authoritative source: private `cursor-rules/config/shell/`. Sync via `scripts/sync-from-cursor-rules.sh`.
+
+Local: consumer `./scripts/lint-shell.sh`. **No secrets** in this folder.

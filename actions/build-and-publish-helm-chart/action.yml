@@ -32,11 +32,11 @@ inputs:
     required: false
     default: ''
   workload_identity_provider:
-    description: 'Full workload_identity_provider resource name (org secret PRIMECARE_GCP_DEV_WORKLOAD_IDENTITY_PROVIDER)'
+    description: 'Full workload_identity_provider resource name (pass from workflow secrets)'
     required: false
     default: ''
   service_account_email:
-    description: 'GCP SA email for WIF — org var PRIMECARE_GCP_ARTIFACT_CI_SA_EMAIL (artifact-only / AR push; see mc-infra github_ci_wif_consumer_hints)'
+    description: 'GCP SA email for WIF (pass from workflow secrets or variables)'
     required: false
     default: ''
 
