@@ -2,9 +2,7 @@
 
 Generic reusable composite actions for the `mclebtec` org.
 
-**Public repo — no secrets, no Cursor rules or lint policy.** See [SECURITY.md](SECURITY.md).
-
-Cursor-specific config and docs lint live in private **`mclebtec/cursor-rules`** only.
+**Public repo — no secrets or project-specific configuration.** See [SECURITY.md](SECURITY.md).
 
 ## Actions (`actions/`)
 
@@ -20,13 +18,10 @@ Cursor-specific config and docs lint live in private **`mclebtec/cursor-rules`**
 ```yaml
 - uses: mclebtec/.github/actions/terraform-fmt-check@master
   with:
-    working-directory: primecare-infra
+    working-directory: infra
 
 - uses: mclebtec/.github/actions/setup-org-github@master
 ```
-
-Docs lint (Prettier) — checkout private `cursor-rules` in the consumer workflow and run
-`./scripts/lint-docs.sh` (see `cursor-rules/config/ci/README.md`).
 
 ## Security
 

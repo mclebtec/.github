@@ -1,7 +1,6 @@
 # Security — public repository policy
 
-`mclebtec/.github` is **public**. No secrets, credentials, Cursor rules, or lint policy configs
-belong here.
+`mclebtec/.github` is **public**. No secrets, credentials, or project-specific configuration belong here.
 
 ## Allowed
 
@@ -11,14 +10,9 @@ belong here.
 
 ## Forbidden
 
-- Cursor rules, `STRUCTURE_ID` manifests, Prettier/shfmt policy tied to Cursor workflows
 - API keys, tokens, passwords, service-account JSON
 - `.env`, `credentials.json`, `*.pem`, `id_rsa*`
-
-## Where Cursor config lives
-
-Private **`mclebtec/cursor-rules`** only. Consumer CI checks out `cursor-rules` for docs lint;
-generic steps use `mclebtec/.github/actions/*`.
+- Project names, private repo references, or unreleased product identifiers
 
 ## Report
 
