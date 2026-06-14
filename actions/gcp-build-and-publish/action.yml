@@ -11,9 +11,8 @@ description: |
   
   This action handles:
   - Maven package building and deployment to GCP Artifact Registry
-  - GraalVM **native** Docker images via `spring-boot-maven-plugin` (`build-image-no-fork` when
-    consumer POM sets `-DskipImage=false`; Paketo `BP_NATIVE_IMAGE=true`)
-  - Docker image publishing to GCP Artifact Registry (PR + master deploy paths)
+  - GraalVM **native** Docker images via `spring-boot-maven-plugin` on **master merge only**
+    (`-DskipImage=false` in build-master-version.sh). PR builds skip the image (tests + Maven JAR only).
   - Linux runner swap for native-image compile memory (configurable)
   - Version management (auto-generated for master, custom for PRs)
   - Optional: Java test/coverage reports (JaCoCo HTML, Surefire/Failsafe XML) as workflow artifacts
@@ -148,7 +147,7 @@ runs:
 
     # Docker Configuration (split into gcp-docker-config action)
     - name: Configure Docker for GCP Artifact Registry
-      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
+      if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
       shell: bash
       run: |
         bash .github/scripts/configure-docker-artifact-registry.sh
@@ -156,7 +155,7 @@ runs:
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
 
     - name: Prepare GraalVM native image build
-      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
+      if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
       shell: bash
       run: bash .github/scripts/prepare-graalvm-native-build.sh
       env:
