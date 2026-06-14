@@ -17,14 +17,14 @@ fi
 if [ -n "${DOCKER_REGISTRY}" ]; then
   echo "Authenticating Docker for registry: ${DOCKER_REGISTRY}"
   gcloud auth configure-docker "${DOCKER_REGISTRY}" --quiet
-  
+
   # Get token and login explicitly
   INITIAL_TOKEN=$(gcloud auth print-access-token)
   if [ -z "$INITIAL_TOKEN" ]; then
     echo "::error::Failed to get access token for Docker login"
     exit 1
   fi
-  
+
   # Use printf to avoid adding extra newline, and verify login succeeds
   printf '%s' "${INITIAL_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}" || {
     echo "::error::Docker login failed"
@@ -97,4 +97,3 @@ mvn clean deploy \
   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
 
 echo "✓ Maven packages and Docker images published successfully with version ${NEW_VERSION}"
-

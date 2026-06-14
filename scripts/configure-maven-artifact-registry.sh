@@ -7,7 +7,7 @@ set -e
 mkdir -p ~/.m2
 
 # Get GCP project from gcloud config (set during authentication)
-GCP_PROJECT=$(gcloud config get-value project 2>/dev/null)
+GCP_PROJECT=$(gcloud config get-value project 2> /dev/null)
 MAVEN_REPOSITORY="${MAVEN_REPOSITORY_VAR}"
 # Default location to us-central1 (can be overridden by setting MAVEN_LOCATION_VAR)
 MAVEN_LOCATION="${MAVEN_LOCATION_VAR:-us-central1}"
@@ -38,7 +38,7 @@ if ! gcloud artifacts repositories describe ${MAVEN_REPOSITORY} \
   --location=${MAVEN_LOCATION} > /dev/null 2>&1; then
   echo "::error::Repository ${MAVEN_REPOSITORY} not found or not accessible"
   echo "::error::Service account needs 'Artifact Registry Writer' role (roles/artifactregistry.writer)"
-  SERVICE_ACCOUNT=$(gcloud config get-value account 2>/dev/null || echo "unknown")
+  SERVICE_ACCOUNT=$(gcloud config get-value account 2> /dev/null || echo "unknown")
   echo "::error::Current service account: ${SERVICE_ACCOUNT}"
   echo "::error::Grant permission with:"
   echo "::error::  gcloud artifacts repositories add-iam-policy-binding ${MAVEN_REPOSITORY} \\"
@@ -50,7 +50,7 @@ fi
 
 # Create Maven settings.xml with OAuth token authentication
 # This matches the pattern used in maven-deploy action for GitHub Actions compatibility
-cat > ~/.m2/settings.xml <<EOF
+cat > ~/.m2/settings.xml << EOF
 <settings>
   <servers>
     <server>
@@ -85,4 +85,3 @@ REPO_URL="https://${MAVEN_LOCATION}-maven.pkg.dev/${GCP_PROJECT}/${MAVEN_REPOSIT
 echo "repository-url=${REPO_URL}" >> $GITHUB_OUTPUT
 echo "✓ Maven repository URL: ${REPO_URL}"
 echo "✓ Maven settings.xml configured successfully"
-

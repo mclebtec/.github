@@ -45,4 +45,3 @@ git remote set-url origin "${ORIGINAL_URL}"
 # git add -A
 # git commit -m "Bump version to ${NEW_VERSION}" || echo "No changes to commit"
 # git push origin master
-
