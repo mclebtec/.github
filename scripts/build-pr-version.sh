@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build and deploy Maven packages for pull requests with custom version
+# Build and deploy Maven packages and Docker images for pull requests.
 # Version format: BASE_VERSION-SNAPSHOT-BRANCH_NAME-COMMIT_HASH
 
 set -e
@@ -32,15 +32,43 @@ if [ -z "${REPO_URL}" ]; then
   exit 1
 fi
 
+# Ensure Docker is authenticated before building native images
+if [ -n "${DOCKER_REGISTRY}" ]; then
+  echo "Authenticating Docker for registry: ${DOCKER_REGISTRY}"
+  gcloud auth configure-docker "${DOCKER_REGISTRY}" --quiet
+
+  INITIAL_TOKEN=$(gcloud auth print-access-token)
+  if [ -z "$INITIAL_TOKEN" ]; then
+    echo "::error::Failed to get access token for Docker login"
+    exit 1
+  fi
+
+  printf '%s' "${INITIAL_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}" || {
+    echo "::error::Docker login failed"
+    exit 1
+  }
+  echo "✓ Docker authenticated"
+fi
+
 echo "Deploying to repository: ${REPO_URL}"
 echo "Using server ID: artifact-registry"
 
 # Refresh access token and update settings.xml before deployment
-# Tokens can expire, so refresh right before deployment
 ACCESS_TOKEN=$(gcloud auth print-access-token)
 if [ -z "$ACCESS_TOKEN" ]; then
   echo "::error::Failed to get access token for deployment"
   exit 1
+fi
+
+export GCP_ACCESS_TOKEN="${ACCESS_TOKEN}"
+
+if [ -n "${DOCKER_REGISTRY}" ]; then
+  echo "Refreshing Docker authentication with fresh token..."
+  printf '%s' "${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-stdin "${DOCKER_REGISTRY}" || {
+    echo "::error::Docker login refresh failed"
+    exit 1
+  }
+  echo "✓ Docker authentication refreshed"
 fi
 
 # Update settings.xml with fresh token
@@ -65,22 +93,19 @@ grep -q "artifact-registry" ~/.m2/settings.xml || {
   exit 1
 }
 
-# Deploy with explicit configuration to override any POM skip settings
-# The altDeploymentRepository format is: serverId::layout::repositoryUrl
 echo "Deployment configuration:"
 echo "  Repository URL: ${REPO_URL}"
 echo "  Server ID: artifact-registry"
+echo "  Docker registry: ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}"
 echo "  Layout: default"
 
-# Override any skip configuration in the POM using system properties
-# These properties override plugin configuration in pom.xml
 mvn clean deploy \
   -Dmaven.javadoc.skip=true \
   -Dmaven.deploy.skip=false \
   -Ddeploy.skip=false \
   -Dmaven.deploy.plugin.skip=false \
   -Dorg.apache.maven.plugins.maven-deploy-plugin.skip=false \
+  -DskipImage=false \
   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
 
-echo "✓ Maven packages deployed successfully with version ${VERSION}"
-
+echo "✓ Maven packages and Docker images published successfully with version ${VERSION}"
