@@ -5,6 +5,7 @@
 set -euo pipefail
 
 SWAP_GB="${NATIVE_IMAGE_SWAP_GB:-8}"
+SWAP_FILE="${NATIVE_IMAGE_SWAP_FILE:-/swapfile-graalvm}"
 
 echo "== GraalVM native image build prep =="
 echo "    Native compile runs inside Paketo (spring-boot-maven-plugin build-image-no-fork)."
@@ -21,15 +22,15 @@ if [[ "$(uname -s)" != "Linux" ]]; then
   exit 0
 fi
 
-if swapon --show | grep -q /swapfile; then
-  echo "== Swap already enabled =="
+if swapon --show | grep -q "${SWAP_FILE}"; then
+  echo "== GraalVM swap file already active: ${SWAP_FILE} =="
   free -h
   exit 0
 fi
 
-echo "== Adding ${SWAP_GB}G swap for GraalVM native image compile =="
-sudo fallocate -l "${SWAP_GB}G" /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
+echo "== Adding ${SWAP_GB}G swap at ${SWAP_FILE} for GraalVM native image compile =="
+sudo fallocate -l "${SWAP_GB}G" "${SWAP_FILE}"
+sudo chmod 600 "${SWAP_FILE}"
+sudo mkswap "${SWAP_FILE}"
+sudo swapon "${SWAP_FILE}"
 free -h
