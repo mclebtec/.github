@@ -11,7 +11,10 @@ description: |
   
   This action handles:
   - Maven package building and deployment to GCP Artifact Registry
-  - Docker image building and publishing to GCP Artifact Registry (for master only)
+  - GraalVM **native** Docker images via `spring-boot-maven-plugin` (`build-image-no-fork` when
+    consumer POM sets `-DskipImage=false`; Paketo `BP_NATIVE_IMAGE=true`)
+  - Docker image publishing to GCP Artifact Registry (PR + master deploy paths)
+  - Linux runner swap for native-image compile memory (configurable)
   - Version management (auto-generated for master, custom for PRs)
   - Optional: Java test/coverage reports (JaCoCo HTML, Surefire/Failsafe XML) as workflow artifacts
   - Optional: Markdown **job summary** (coverage table + Surefire totals) on the workflow run page
@@ -68,6 +71,10 @@ inputs:
     description: 'Append JaCoCo/Surefire Markdown to the job Summary tab (GITHUB_STEP_SUMMARY)'
     required: false
     default: 'true'
+  native-image-swap-gb:
+    description: 'Swap space (GB) on Linux runners before native Docker image build (0 to skip)'
+    required: false
+    default: '8'
 
 outputs:
   repository-url:
@@ -147,6 +154,13 @@ runs:
         bash .github/scripts/configure-docker-artifact-registry.sh
       env:
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
+
+    - name: Prepare GraalVM native image build
+      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
+      shell: bash
+      run: bash .github/scripts/prepare-graalvm-native-build.sh
+      env:
+        NATIVE_IMAGE_SWAP_GB: ${{ inputs.native-image-swap-gb }}
 
     - name: Build and Publish
       id: build
