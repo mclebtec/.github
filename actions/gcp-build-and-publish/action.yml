@@ -141,7 +141,7 @@ runs:
 
     # Docker Configuration (split into gcp-docker-config action)
     - name: Configure Docker for GCP Artifact Registry
-      if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
+      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
       shell: bash
       run: |
         bash .github/scripts/configure-docker-artifact-registry.sh
