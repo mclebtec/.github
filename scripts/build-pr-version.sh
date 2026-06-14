@@ -98,7 +98,7 @@ echo "  Repository URL: ${REPO_URL}"
 echo "  Server ID: artifact-registry"
 echo "  Docker registry: ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}"
 echo "  Layout: default"
-echo "  Docker image: skipped on PR (native image builds on master merge only)"
+echo "  Docker image: JVM (-DskipImage=false, spring-boot-maven-plugin)"
 
 mvn clean deploy \
   -Dmaven.javadoc.skip=true \
@@ -106,7 +106,7 @@ mvn clean deploy \
   -Ddeploy.skip=false \
   -Dmaven.deploy.plugin.skip=false \
   -Dorg.apache.maven.plugins.maven-deploy-plugin.skip=false \
-  -DskipImage=true \
+  -DskipImage=false \
   -DaltDeploymentRepository=artifact-registry::default::${REPO_URL}
 
-echo "✓ Maven packages deployed successfully with version ${VERSION}"
+echo "✓ Maven packages and Docker images published successfully with version ${VERSION}"

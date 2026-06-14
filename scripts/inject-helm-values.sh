@@ -20,11 +20,11 @@ read_helm_mc_property_from_pom() {
     printf '%s' ""
     return
   fi
-  if command -v mvn >/dev/null 2>&1; then
-    v=$(mvn -f "$pom" help:evaluate -Dexpression="${tag}" -q -DforceStdout 2>/dev/null | tail -1 | tr -d '\r\n') || true
+  if command -v mvn > /dev/null 2>&1; then
+    v=$(mvn -f "$pom" help:evaluate -Dexpression="${tag}" -q -DforceStdout 2> /dev/null | tail -1 | tr -d '\r\n') || true
   fi
   if [ -z "$v" ] || [ "$v" = "null" ]; then
-    v=$(grep "<${tag}>" "$pom" 2>/dev/null | head -1 | sed -E 's/^[[:space:]]*<[^>]+>([^<]+)<\/[^>]+>.*/\1/' | tr -d '\r\n')
+    v=$(grep "<${tag}>" "$pom" 2> /dev/null | head -1 | sed -E 's/^[[:space:]]*<[^>]+>([^<]+)<\/[^>]+>.*/\1/' | tr -d '\r\n')
   fi
   printf '%s' "$v"
 }
@@ -48,7 +48,7 @@ resolve_helm_mc_version() {
 
 IMAGE_TAG="${IMAGE_TAG:-}"
 if [ -z "$IMAGE_TAG" ]; then
-  IMAGE_TAG=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null || echo "1.0.0")
+  IMAGE_TAG=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2> /dev/null || echo "1.0.0")
 fi
 
 if [ -n "${GITHUB_ENV:-}" ]; then
@@ -97,10 +97,10 @@ if [ -f "$DEPS_FILE" ]; then
     echo "Syncing helm dependencies: mc-data=$DATA_VERSION, mc-presentation=$PRESENTATION_VERSION"
     while IFS= read -r -d '' chart; do
       if grep -q 'name: mc-data' "$chart"; then
-        sed -i.bak -E "s/^(    version: \")[^\"]+/\1$DATA_VERSION/" "$chart" 2>/dev/null && rm -f "${chart}.bak" || true
+        sed -i.bak -E "s/^(    version: \")[^\"]+/\1$DATA_VERSION/" "$chart" 2> /dev/null && rm -f "${chart}.bak" || true
       fi
       if grep -q 'name: mc-presentation' "$chart"; then
-        sed -i.bak -E "s/^(    version: \")[^\"]+/\1$PRESENTATION_VERSION/" "$chart" 2>/dev/null && rm -f "${chart}.bak" || true
+        sed -i.bak -E "s/^(    version: \")[^\"]+/\1$PRESENTATION_VERSION/" "$chart" 2> /dev/null && rm -f "${chart}.bak" || true
       fi
     done < <(find . -name "Chart.yaml" -print0)
   fi

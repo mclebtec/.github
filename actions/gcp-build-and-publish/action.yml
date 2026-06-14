@@ -11,9 +11,9 @@ description: |
   
   This action handles:
   - Maven package building and deployment to GCP Artifact Registry
-  - GraalVM **native** Docker images via `spring-boot-maven-plugin` on **master merge only**
-    (`-DskipImage=false` in build-master-version.sh). PR builds skip the image (tests + Maven JAR only).
-  - Linux runner swap for native-image compile memory (configurable)
+  - JVM Docker images via `spring-boot-maven-plugin` when `-DskipImage=false` (`jvm-image` profile).
+    GraalVM: `-Dgraalvm.image=true` (`graalvm-image` profile, paused in CI).
+  - Docker image publishing to GCP Artifact Registry (PR branches and master)
   - Version management (auto-generated for master, custom for PRs)
   - Optional: Java test/coverage reports (JaCoCo HTML, Surefire/Failsafe XML) as workflow artifacts
   - Optional: Markdown **job summary** (coverage table + Surefire totals) on the workflow run page
@@ -71,9 +71,9 @@ inputs:
     required: false
     default: 'true'
   native-image-swap-gb:
-    description: 'Swap space (GB) on Linux runners before native Docker image build (0 to skip)'
+    description: 'Swap GB for GraalVM native builds (0 = skip; unused while nativeImage=false)'
     required: false
-    default: '8'
+    default: '0'
 
 outputs:
   repository-url:
@@ -147,7 +147,7 @@ runs:
 
     # Docker Configuration (split into gcp-docker-config action)
     - name: Configure Docker for GCP Artifact Registry
-      if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
+      if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
       shell: bash
       run: |
         bash .github/scripts/configure-docker-artifact-registry.sh
@@ -155,7 +155,7 @@ runs:
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
 
     - name: Prepare GraalVM native image build
-      if: inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
+      if: inputs.native-image-swap-gb != '0' && inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master'
       shell: bash
       run: bash .github/scripts/prepare-graalvm-native-build.sh
       env:

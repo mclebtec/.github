@@ -10,7 +10,7 @@ if [[ -z "${SUMMARY}" ]]; then
   exit 0
 fi
 
-python3 <<'PY'
+python3 << 'PY'
 import glob
 import os
 import sys

@@ -25,25 +25,25 @@ TAG_NAME="v${NEW_VERSION}"
 # Build release notes with artifact registry links
 # Using a here-doc style approach that jq will handle correctly
 RELEASE_NOTES_FILE=$(mktemp)
-cat > "${RELEASE_NOTES_FILE}" <<EOF
+cat > "${RELEASE_NOTES_FILE}" << EOF
 ## Release ${NEW_VERSION}
 
 EOF
 
 # Add Maven repository link if available
 if [ -n "${REPO_URL}" ]; then
-  cat >> "${RELEASE_NOTES_FILE}" <<EOF
+  cat >> "${RELEASE_NOTES_FILE}" << EOF
 ### Maven Artifacts
 Maven packages are available in GCP Artifact Registry:
 - Repository: \`${REPO_URL}\`
 
 EOF
-  
+
   # Extract repository name from URL for a more readable link
   if echo "${REPO_URL}" | grep -q "artifactregistry.googleapis.com"; then
     REGION=$(echo "${REPO_URL}" | sed -n 's|.*//\([^.]*\)\.artifactregistry\.googleapis\.com.*|\1|p')
     REPO_PATH=$(echo "${REPO_URL}" | sed -n 's|.*maven/\([^/]*\)/.*|\1|p')
-    cat >> "${RELEASE_NOTES_FILE}" <<EOF
+    cat >> "${RELEASE_NOTES_FILE}" << EOF
 View in [GCP Artifact Registry](https://console.cloud.google.com/artifacts/maven/${REGION}/${REPO_PATH})
 
 EOF
@@ -53,20 +53,20 @@ fi
 # Add Docker image link if available
 if [ -n "${DOCKER_REGISTRY}" ] && [ -n "${DOCKER_REPOSITORY}" ]; then
   IMAGE_TAG="${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${NEW_VERSION}"
-  cat >> "${RELEASE_NOTES_FILE}" <<EOF
+  cat >> "${RELEASE_NOTES_FILE}" << EOF
 ### Docker Images
 Docker images are available in GCP Artifact Registry:
 - Image: \`${IMAGE_TAG}\`
 - Pull command: \`docker pull ${IMAGE_TAG}\`
 
 EOF
-  
+
   # Extract registry info for console link
   if echo "${DOCKER_REGISTRY}" | grep -q "\.pkg\.dev"; then
     REGION=$(echo "${DOCKER_REGISTRY}" | sed -n 's|.*//\([^.]*\)\.pkg\.dev.*|\1|p')
     REPO_PATH=$(echo "${DOCKER_REGISTRY}" | sed -n 's|.*pkg\.dev/\([^/]*\)/\([^/]*\)/.*|\1/\2|p')
     REPO_NAME_ONLY=$(echo "${DOCKER_REGISTRY}" | sed -n 's|.*pkg\.dev/[^/]*/[^/]*/\([^/]*\)|\1|p')
-    cat >> "${RELEASE_NOTES_FILE}" <<EOF
+    cat >> "${RELEASE_NOTES_FILE}" << EOF
 View in [GCP Artifact Registry](https://console.cloud.google.com/artifacts/docker/${REGION}/${REPO_PATH}/${REPO_NAME_ONLY})
 
 EOF
@@ -107,4 +107,3 @@ else
   echo "${BODY}"
   exit 1
 fi
-

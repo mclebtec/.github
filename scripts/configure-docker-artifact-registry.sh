@@ -27,4 +27,3 @@ printf '%s' "${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-std
 }
 
 echo "✓ Docker authenticated for registry: ${DOCKER_REGISTRY}"
-
