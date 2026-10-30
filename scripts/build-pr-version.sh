@@ -1,6 +1,7 @@
 #!/bin/bash
 # Build and deploy Maven packages and Docker images for pull requests.
-# Version format: BASE_VERSION-SNAPSHOT-BRANCH_NAME-COMMIT_HASH
+# Version format: BASE_VERSION-BRANCH_NAME-COMMIT_HASH-SNAPSHOT
+# (-SNAPSHOT must be the final qualifier or Artifact Registry returns HTTP 400.)
 
 set -e
 
@@ -22,8 +23,8 @@ if [ -z "$COMMIT_HASH" ]; then
   COMMIT_HASH=$(git rev-parse --short HEAD)
 fi
 
-# Remove -SNAPSHOT if present, then add branch name and commit hash
-VERSION=$(echo "${BASE_VERSION}" | sed 's/-SNAPSHOT$//')-SNAPSHOT-${SANITIZED_BRANCH}-${COMMIT_HASH}
+# Strip POM -SNAPSHOT, then append branch + sha, then -SNAPSHOT as the final qualifier.
+VERSION=$(echo "${BASE_VERSION}" | sed 's/-SNAPSHOT$//')-${SANITIZED_BRANCH}-${COMMIT_HASH}-SNAPSHOT
 echo "Setting version to: ${VERSION}"
 
 # Verify REPO_URL is set
