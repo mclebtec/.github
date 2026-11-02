@@ -34,37 +34,63 @@ else
   echo "Candidate version from tags: ${NEW_VERSION}"
 fi
 
+# Parent POM Maven path under Artifact Registry (override via MAVEN_AR_GROUP_PATH / MAVEN_AR_ARTIFACT).
+MAVEN_AR_GROUP_PATH="${MAVEN_AR_GROUP_PATH:-com/mclebtec/primecare}"
+MAVEN_AR_ARTIFACT="${MAVEN_AR_ARTIFACT:-primecare-domain}"
+
 maven_ar_has_version() {
   local version="$1"
+
   if ! command -v gcloud >/dev/null 2>&1; then
+    echo "AR check skipped for ${version}: gcloud not available"
+    return 1
+  fi
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "AR check skipped for ${version}: curl not available"
     return 1
   fi
 
-  local gcp_project
-  gcp_project=$(gcloud config get-value project 2>/dev/null || true)
-  local maven_repo="${MAVEN_REPOSITORY_VAR:-${MAVEN_REPOSITORY:-}}"
-  # Allow "project/repo" or bare repo id.
-  maven_repo=$(echo "${maven_repo}" | sed 's|^[^/]*/||')
-  local maven_loc="${MAVEN_LOCATION_VAR:-${MAVEN_LOCATION:-}}"
-  if [ -z "${maven_loc}" ] && [ -n "${REPO_URL:-}" ]; then
-    maven_loc=$(echo "${REPO_URL}" | sed -n 's|https://\([^.]*\)-maven\.pkg\.dev/.*|\1|p')
+  local repo_url="${REPO_URL:-}"
+  if [ -z "${repo_url}" ]; then
+    local maven_repo="${MAVEN_REPOSITORY_VAR:-${MAVEN_REPOSITORY:-}}"
+    maven_repo=$(echo "${maven_repo}" | sed 's|^[^/]*/||')
+    local maven_loc="${MAVEN_LOCATION_VAR:-${MAVEN_LOCATION:-}}"
+    if [ -z "${maven_loc}" ]; then
+      maven_loc="africa-south1"
+    fi
+    local gcp_project
+    gcp_project=$(gcloud config get-value project 2>/dev/null || true)
+    if [ -n "${gcp_project}" ] && [ -n "${maven_repo}" ]; then
+      repo_url="https://${maven_loc}-maven.pkg.dev/${gcp_project}/${maven_repo}"
+    fi
   fi
-  maven_loc="${maven_loc:-africa-south1}"
+  repo_url="${repo_url%/}"
 
-  # Parent POM coordinates for primecare-domain (override via MAVEN_AR_PACKAGE).
-  local package="${MAVEN_AR_PACKAGE:-com.mclebtec.primecare:primecare-domain}"
-
-  if [ -z "${gcp_project}" ] || [ -z "${maven_repo}" ]; then
+  if [ -z "${repo_url}" ]; then
+    echo "AR check skipped for ${version}: REPO_URL / Maven repo not set"
     return 1
   fi
 
-  gcloud artifacts versions list \
-    --package="${package}" \
-    --repository="${maven_repo}" \
-    --location="${maven_loc}" \
-    --project="${gcp_project}" \
-    --format='value(name)' 2>/dev/null |
-    grep -qE "/${version//./\\.}$"
+  local token
+  token=$(gcloud auth print-access-token 2>/dev/null || true)
+  if [ -z "${token}" ]; then
+    echo "AR check skipped for ${version}: could not get access token"
+    return 1
+  fi
+
+  # Probe the exact artifact Maven would overwrite (matches deploy 400 path).
+  local pom_url="${repo_url}/${MAVEN_AR_GROUP_PATH}/${MAVEN_AR_ARTIFACT}/${version}/${MAVEN_AR_ARTIFACT}-${version}.pom"
+  local code
+  code=$(
+    curl -sS -o /dev/null -w '%{http_code}' \
+      -H "Authorization: Bearer ${token}" \
+      "${pom_url}" 2>/dev/null || echo "000"
+  )
+  echo "AR probe ${pom_url} -> HTTP ${code}"
+  if [ "${code}" = "200" ]; then
+    return 0
+  fi
+  return 1
 }
 
 # Bump until the version is free in git tags and Artifact Registry.
