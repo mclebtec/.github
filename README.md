@@ -1,4 +1,4 @@
-# GitHub Actions
+# McLebTec org GitHub Actions
 
 Generic reusable composite actions for the `mclebtec` org.
 
