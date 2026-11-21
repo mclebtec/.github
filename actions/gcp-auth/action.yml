@@ -1,19 +1,45 @@
 name: 'GCP Authentication'
-description: 'Authenticate to Google Cloud and set up Cloud SDK'
+description: |
+  Authenticate to Google Cloud and set up Cloud SDK.
+  Prefer Workload Identity Federation (`workload-identity-provider` + `service-account-email`);
+  pass `gcp-credentials` JSON only when WIF is unavailable.
 
 inputs:
   gcp-credentials:
-    description: 'GCP service account credentials JSON'
-    required: true
+    description: 'GCP service account credentials JSON (fallback when WIF inputs are unset)'
+    required: false
+    default: ''
+  workload-identity-provider:
+    description: 'Full workload_identity_provider resource name (from workflow secrets)'
+    required: false
+    default: ''
+  service-account-email:
+    description: 'GCP service account email for WIF (from workflow secrets or variables)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v3
+    - name: Authenticate to Google Cloud (Workload Identity Federation)
+      if: inputs.workload-identity-provider != '' && inputs.service-account-email != ''
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account-email }}
+
+    - name: Authenticate to Google Cloud (service account key)
+      if: (inputs.workload-identity-provider == '' || inputs.service-account-email == '') && inputs.gcp-credentials != ''
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
       with:
         credentials_json: ${{ inputs.gcp-credentials }}
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v3
+    - name: Fail if GCP auth is not configured
+      if: (inputs.workload-identity-provider == '' || inputs.service-account-email == '') && inputs.gcp-credentials == ''
+      shell: bash
+      run: |
+        echo "::error::Provide either workload-identity-provider + service-account-email (WIF) or gcp-credentials (JSON key)."
+        exit 1
 
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1

@@ -24,6 +24,9 @@ runs:
       working-directory: ${{ github.workspace }}
       env:
         VARS_JSON: ${{ inputs.vars_json }}
+        VARIABLES_FILE: ${{ inputs.variables_file }}
+        ENVIRONMENT: ${{ inputs.environment }}
       run: |
+        set -euo pipefail
         python3 -m pip install --quiet pyyaml
-        python3 "${{ github.action_path }}/load_env.py" "${{ inputs.variables_file }}" "${{ inputs.environment }}"
+        python3 "${{ github.action_path }}/load_env.py" "${VARIABLES_FILE}" "${ENVIRONMENT}"

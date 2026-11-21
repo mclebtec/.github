@@ -11,10 +11,10 @@ set -e
 echo "Generating new version for master release..."
 
 # Checkout often omits tags; fetch so we do not redeploy an immutable release (AR 400).
-git fetch --tags --force origin 2>/dev/null || git fetch --tags --force 2>/dev/null || true
+git fetch --tags --force origin 2> /dev/null || git fetch --tags --force 2> /dev/null || true
 
 # Highest v* tag globally (not only tags reachable from HEAD).
-LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1 || true)
+LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname 2> /dev/null | head -1 || true)
 
 if [ -z "${LATEST_TAG}" ]; then
   NEW_VERSION="1.0.0"
@@ -24,7 +24,7 @@ else
   LATEST_VERSION=$(echo "${LATEST_TAG}" | sed 's/^v//')
   echo "Latest version: ${LATEST_VERSION}"
 
-  IFS='.' read -ra VERSION_PARTS <<<"${LATEST_VERSION}"
+  IFS='.' read -ra VERSION_PARTS <<< "${LATEST_VERSION}"
   MAJOR=${VERSION_PARTS[0]:-1}
   MINOR=${VERSION_PARTS[1]:-0}
   PATCH=${VERSION_PARTS[2]:-0}
@@ -41,11 +41,11 @@ MAVEN_AR_ARTIFACT="${MAVEN_AR_ARTIFACT:-primecare-domain}"
 maven_ar_has_version() {
   local version="$1"
 
-  if ! command -v gcloud >/dev/null 2>&1; then
+  if ! command -v gcloud > /dev/null 2>&1; then
     echo "AR check skipped for ${version}: gcloud not available"
     return 1
   fi
-  if ! command -v curl >/dev/null 2>&1; then
+  if ! command -v curl > /dev/null 2>&1; then
     echo "AR check skipped for ${version}: curl not available"
     return 1
   fi
@@ -59,7 +59,7 @@ maven_ar_has_version() {
       maven_loc="africa-south1"
     fi
     local gcp_project
-    gcp_project=$(gcloud config get-value project 2>/dev/null || true)
+    gcp_project=$(gcloud config get-value project 2> /dev/null || true)
     if [ -n "${gcp_project}" ] && [ -n "${maven_repo}" ]; then
       repo_url="https://${maven_loc}-maven.pkg.dev/${gcp_project}/${maven_repo}"
     fi
@@ -72,7 +72,7 @@ maven_ar_has_version() {
   fi
 
   local token
-  token=$(gcloud auth print-access-token 2>/dev/null || true)
+  token=$(gcloud auth print-access-token 2> /dev/null || true)
   if [ -z "${token}" ]; then
     echo "AR check skipped for ${version}: could not get access token"
     return 1
@@ -84,7 +84,7 @@ maven_ar_has_version() {
   code=$(
     curl -sS -o /dev/null -w '%{http_code}' \
       -H "Authorization: Bearer ${token}" \
-      "${pom_url}" 2>/dev/null || echo "000"
+      "${pom_url}" 2> /dev/null || echo "000"
   )
   echo "AR probe ${pom_url} -> HTTP ${code}"
   if [ "${code}" = "200" ]; then
@@ -97,14 +97,14 @@ maven_ar_has_version() {
 MAX_BUMPS=50
 bumps=0
 while [ "${bumps}" -lt "${MAX_BUMPS}" ]; do
-  if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
+  if git rev-parse "v${NEW_VERSION}" > /dev/null 2>&1; then
     echo "Git tag v${NEW_VERSION} already exists; bumping patch"
   elif maven_ar_has_version "${NEW_VERSION}"; then
     echo "Maven AR already has ${NEW_VERSION}; bumping patch (avoids deploy 400)"
   else
     break
   fi
-  IFS='.' read -ra VERSION_PARTS <<<"${NEW_VERSION}"
+  IFS='.' read -ra VERSION_PARTS <<< "${NEW_VERSION}"
   MAJOR=${VERSION_PARTS[0]:-1}
   MINOR=${VERSION_PARTS[1]:-0}
   PATCH=${VERSION_PARTS[2]:-0}
@@ -119,7 +119,7 @@ if [ "${bumps}" -ge "${MAX_BUMPS}" ]; then
 fi
 
 export NEW_VERSION
-echo "NEW_VERSION=${NEW_VERSION}" >>$GITHUB_ENV
-echo "version=${NEW_VERSION}" >>$GITHUB_OUTPUT
+echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
 echo "✓ Generated version: ${NEW_VERSION}"
