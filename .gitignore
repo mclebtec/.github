@@ -4,7 +4,12 @@
 .env.*
 *.pem
 *.p12
+*.key
+*.cer
+*.mobileprovision
 credentials.json
 *secret*.json
 id_rsa
 id_rsa.pub
+*.keystore
+*.jks

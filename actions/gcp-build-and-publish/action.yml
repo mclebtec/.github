@@ -94,14 +94,14 @@ runs:
 
     - name: Authenticate to Google Cloud (Workload Identity Federation)
       if: inputs.workload-identity-provider != '' && inputs.service-account-email != ''
-      uses: google-github-actions/auth@v3
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
       with:
         workload_identity_provider: ${{ inputs.workload-identity-provider }}
         service_account: ${{ inputs.service-account-email }}
 
     - name: Authenticate to Google Cloud (service account key)
       if: (inputs.workload-identity-provider == '' || inputs.service-account-email == '') && inputs.gcp-credentials != ''
-      uses: google-github-actions/auth@v3
+      uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
       with:
         credentials_json: ${{ inputs.gcp-credentials }}
 
@@ -113,7 +113,7 @@ runs:
         exit 1
 
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v3
+      uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
     # Maven ~/.m2/repository cache is owned by the caller workflow (setup-java cache: maven
     # and/or actions/cache) to avoid duplicate keys and failed cache saves.
@@ -134,11 +134,13 @@ runs:
       id: repo-url
       if: inputs.event-type == 'pull_request' || (inputs.event-type == 'push' && inputs.branch-ref == 'refs/heads/master')
       shell: bash
+      env:
+        MAVEN_REPO_URL: ${{ steps.maven-config.outputs.repository-url }}
       run: |
-        # Read repository URL from maven-config output
-        REPO_URL="${{ steps.maven-config.outputs.repository-url }}"
+        set -euo pipefail
+        REPO_URL="${MAVEN_REPO_URL}"
         if [ -n "${REPO_URL}" ]; then
-          echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
+          echo "REPO_URL=${REPO_URL}" >> "${GITHUB_ENV}"
           echo "Repository URL extracted: ${REPO_URL}"
         else
           echo "::error::Repository URL not found in maven-config outputs"
@@ -164,30 +166,29 @@ runs:
     - name: Build and Publish
       id: build
       shell: bash
-      run: |
-        if [ "${{ inputs.event-type }}" == "pull_request" ]; then
-          # PR to master: deploy with version from POM + branch name + commit hash
-          bash .github/scripts/build-pr-version.sh
-          # Extract version for output
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        elif [ "${{ inputs.event-type }}" == "push" ] && [ "${{ inputs.branch-ref }}" == "refs/heads/master" ]; then
-          # Merge to master: automatically generate version and publish
-          source .github/scripts/generate-version.sh
-          bash .github/scripts/build-master-version.sh
-          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-        else
-          # Other: just build
-          mvn clean package -Dmaven.javadoc.skip=true
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-        fi
       env:
+        EVENT_TYPE: ${{ inputs.event-type }}
+        BRANCH_REF: ${{ inputs.branch-ref }}
         MAVEN_REGISTRY: ${{ env.MAVEN_REGISTRY }}
         MAVEN_REPOSITORY: ${{ env.MAVEN_REPOSITORY }}
         DOCKER_REGISTRY: ${{ inputs.docker-registry }}
         DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         REPO_URL: ${{ env.REPO_URL }}
+      run: |
+        set -euo pipefail
+        if [ "${EVENT_TYPE}" == "pull_request" ]; then
+          bash .github/scripts/build-pr-version.sh
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+        elif [ "${EVENT_TYPE}" == "push" ] && [ "${BRANCH_REF}" == "refs/heads/master" ]; then
+          source .github/scripts/generate-version.sh
+          bash .github/scripts/build-master-version.sh
+          echo "version=${NEW_VERSION}" >> "${GITHUB_OUTPUT}"
+        else
+          mvn clean package -Dmaven.javadoc.skip=true
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+        fi
 
     - name: Java test and coverage summary (job summary)
       if: always() && inputs.java-job-summary == 'true'
@@ -196,7 +197,7 @@ runs:
 
     - name: Upload Java test and coverage reports
       if: always() && inputs.upload-java-reports == 'true'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: java-reports-${{ github.run_id }}
         path: |
