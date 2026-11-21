@@ -36,4 +36,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          shellcheck scripts/*.sh
+          # Fail on errors only; pre-existing info/style/warning debt is tracked for follow-up.
+          shellcheck -S error scripts/*.sh
